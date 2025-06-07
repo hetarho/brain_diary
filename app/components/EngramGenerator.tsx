@@ -43,6 +43,12 @@ export function EngramGenerator() {
       })
       
       console.log('생성된 엔그램:', result)
+      
+      // 분류 결과 표시
+      if (result.analysis) {
+        console.log('분석 결과:', result.analysis)
+      }
+      
       setDiaryContent('')
       refetch() // 엔그램 목록 새로고침
     } catch (error) {
@@ -86,6 +92,73 @@ export function EngramGenerator() {
       {/* 엔그램 목록 */}
       <div className="mt-8">
         <h3 className="text-xl font-semibold mb-4">생성된 엔그램들</h3>
+        
+        {/* 최근 분석 결과 표시 */}
+        {generateEngrams.data?.analysis && (
+          <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+            <h4 className="font-semibold mb-2 text-gray-500">📊 분석 결과</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <span className="text-gray-600">배경 정보:</span>
+                <span className="ml-1 font-medium text-gray-500">{generateEngrams.data.analysis.backgroundSentences}개</span>
+              </div>
+              <div>
+                <span className="text-gray-600">오늘의 경험:</span>
+                <span className="ml-1 font-medium text-gray-500">{generateEngrams.data.analysis.experienceSentences}개</span>
+              </div>
+              <div>
+                <span className="text-gray-600">생성된 엔그램:</span>
+                <span className="ml-1 font-medium text-gray-500">{generateEngrams.data.analysis.totalEngrams}개</span>
+              </div>
+              <div>
+                <span className="text-gray-600">기억 강도:</span>
+                <span className="ml-1 font-medium text-gray-500">{generateEngrams.data.analysis.memoryStrength}</span>
+              </div>
+            </div>
+            <div className="mt-2">
+              <span className="text-gray-600">주요 감정:</span>
+              <span className="ml-1 font-medium text-gray-500">{generateEngrams.data.analysis.dominantEmotion}</span>
+            </div>
+            <div className="mt-1">
+              <span className="text-gray-600">주요 테마:</span>
+              <span className="ml-1 text-gray-500">{generateEngrams.data.analysis.keyThemes?.join(', ')}</span>
+            </div>
+          </div>
+        )}
+
+        {/* 분류 정보 표시 */}
+        {generateEngrams.data?.classification && (
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <h4 className="font-semibold mb-3">🔍 문장 분류 결과</h4>
+            
+            {generateEngrams.data.classification.backgroundInfo?.length > 0 && (
+              <div className="mb-3">
+                <h5 className="text-sm font-medium text-gray-700 mb-1">📋 배경 정보 (저장되지 않음)</h5>
+                <ul className="text-sm text-gray-600 space-y-1">
+                  {generateEngrams.data.classification.backgroundInfo.map((info: string, index: number) => (
+                    <li key={index} className="pl-2 border-l-2 border-gray-300">
+                      {info}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            
+            {generateEngrams.data.classification.todaysExperience?.length > 0 && (
+              <div>
+                <h5 className="text-sm font-medium text-green-700 mb-1">⭐ 오늘의 경험 (엔그램으로 저장됨)</h5>
+                <ul className="text-sm text-green-600 space-y-1">
+                  {generateEngrams.data.classification.todaysExperience.map((exp: string, index: number) => (
+                    <li key={index} className="pl-2 border-l-2 border-green-300">
+                      {exp}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+        
         {userEngrams && userEngrams.length > 0 ? (
           <div className="grid gap-4">
             {userEngrams.map((engram) => (

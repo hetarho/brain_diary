@@ -78,13 +78,53 @@ export const engramRouter = router({
         
         const systemMessage = `당신은 뇌과학 전문가이자 기억 분석 AI입니다. 사용자의 일기를 분석하여 뇌과학 이론에 기반한 엔그램(기억의 최소 단위)으로 분해해주세요.
 
+## 🧠 2단계 분석 프로세스
+
+### 1단계: 문장 분류
+먼저 일기 내용을 다음 기준으로 분류하세요:
+
+#### 📋 배경 정보 (엔그램으로 저장하지 않음)
+다음과 같은 표현이 포함된 문장들은 배경 정보로 분류하고 엔그램으로 저장하지 마세요:
+
+**시간적 일반화:**
+- "평소에", "항상", "보통", "대개", "늘", "자주", "가끔"
+- "원래", "예전부터", "전부터", "어릴 때부터"
+
+**습관적 상태:**
+- "~하곤 했다", "~하는 편이다", "~한 성격이다"
+- "별로 좋아하지 않는다", "관심이 없다", "~를 싫어한다"
+
+**일반적 선호나 성향:**
+- 과거의 지속적인 상태나 감정
+- 개인의 일반적인 특성이나 취향
+
+#### ⭐ 오늘의 경험 (엔그램으로 저장)
+다음과 같은 표현이 포함된 문장들만 엔그램으로 변환하세요:
+
+**구체적 시점:**
+- "오늘", "이번에", "방금", "아까", "막상", "갑자기"
+- "처음으로", "새롭게", "이제야"
+
+**구체적 사건이나 행동:**
+- 실제로 일어난 일, 만난 사람, 간 장소
+- 새로운 감정이나 깨달음
+- 오늘 경험한 변화나 사건
+
+**감정 변화:**
+- 구체적인 상황에서 느낀 감정
+- 예상과 다른 감정 반응
+
+### 2단계: 엔그램 생성
+오늘의 경험으로 분류된 내용만을 대상으로 엔그램을 생성하세요.
+배경 정보는 맥락 이해를 위해서만 참고하고, 절대 엔그램으로 저장하지 마세요.
+
 ## 분석 기준:
 
 ### 1. 엔그램 추출 원칙
-- 하나의 엔그램은 하나의 구체적인 기억 요소를 담아야 합니다
+- 하나의 엔그램은 하나의 구체적인 오늘의 기억 요소를 담아야 합니다
 - 감정, 사건, 사람, 장소, 학습 등으로 분류 가능해야 합니다
 - 너무 세분화하지 말고, 의미 있는 단위로 묶어주세요
-- 일반적으로 한 문장당 1-3개의 엔그램이 적절합니다
+- 배경 정보는 절대 엔그램으로 만들지 마세요
 
 ### 2. 분류 카테고리 (MemoryType)
 - EXPERIENCE: 구체적인 경험이나 사건
@@ -129,6 +169,10 @@ export const engramRouter = router({
 다음 JSON 형식으로 응답해주세요:
 
 {
+  "classification": {
+    "backgroundInfo": ["배경 정보로 분류된 문장들"],
+    "todaysExperience": ["오늘의 경험으로 분류된 문장들"]
+  },
   "engrams": [
     {
       "content": "추출된 기억 내용 (한 문장으로 요약)",
@@ -140,10 +184,43 @@ export const engramRouter = router({
     }
   ],
   "analysis": {
-    "totalEngrams": 숫자,
+    "filteredSentences": 배경정보로_필터링된_문장_수,
+    "backgroundSentences": 배경정보_문장_수,
+    "experienceSentences": 오늘의경험_문장_수,
+    "totalEngrams": 생성된_엔그램_수,
     "dominantEmotion": "전체적인 감정 톤",
     "keyThemes": ["주요 테마1", "주요 테마2"],
     "memoryStrength": "WEAK|MODERATE|STRONG"
+  }
+}
+
+**예시:**
+입력: "평소에는 아버지차라서 별로 감흥이 없었는데 막상 차를 폐차시킨다고 하니까 슬펐다"
+
+출력:
+{
+  "classification": {
+    "backgroundInfo": ["평소에는 아버지차라서 별로 감흥이 없었다"],
+    "todaysExperience": ["막상 차를 폐차시킨다고 하니까 슬펐다"]
+  },
+  "engrams": [
+    {
+      "content": "아버지 차를 폐차한다는 소식에 슬픔을 느꼈다",
+      "category": "EMOTION",
+      "emotionScore": -0.6,
+      "importance": 0.7,
+      "crebScore": 0.8,
+      "keywords": ["아버지", "폐차", "슬픔", "이별"]
+    }
+  ],
+  "analysis": {
+    "filteredSentences": 1,
+    "backgroundSentences": 1,
+    "experienceSentences": 1,
+    "totalEngrams": 1,
+    "dominantEmotion": "슬픔",
+    "keyThemes": ["가족", "이별"],
+    "memoryStrength": "STRONG"
   }
 }`
 
@@ -195,7 +272,8 @@ export const engramRouter = router({
         return {
           success: true,
           engrams: savedEngrams,
-          analysis: result.analysis
+          analysis: result.analysis,
+          classification: result.classification
         }
 
       } catch (error) {
