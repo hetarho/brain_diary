@@ -57,11 +57,10 @@ model Engram {
   embedding       Float[]        // 벡터 임베딩 (패턴 분리/완성용)
   
   // 뇌과학적 속성
-  crebScore       Float          @default(0.5) // CREB 아날로그 - 엔그램 할당 확률
+  crebScore       Float          @default(0.5) // CREB 아날로그 - 생물학적 기억 강도
   emotionScore    Float          @default(0.0) // 감정 강도 (-1 ~ +1)
-  importance      Float          @default(0.5) // 중요도 (선택적 공고화용)
+  importance      Float          @default(0.5) // 주관적 중요도
   rehearsalCount  Int            @default(0)   // 재열람 횟수
-  isStarred       Boolean        @default(false) // 사용자 별표
   
   // 공고화 상태
   consolidationState ConsolidationState @default(FRESH)

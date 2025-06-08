@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { trpc } from '../../server/trpc/client'
 
 
 export function EngramGenerator() {
   const [diaryContent, setDiaryContent] = useState('')
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string } | null>(null)
+  const [selectedEngramId, setSelectedEngramId] = useState<string | null>(null)
 
   // tRPC 훅 사용
   const generateEngrams = trpc.engram.generate.useMutation()
@@ -16,29 +17,45 @@ export function EngramGenerator() {
     { userId: currentUser?.id || '' },
     { enabled: !!currentUser?.id }
   )
+  const { data: connectedEngrams } = trpc.engram.getConnectedEngrams.useQuery(
+    { engramId: selectedEngramId || '', minStrength: 0.5 },
+    { enabled: !!selectedEngramId }
+  )
+
+  // 컴포넌트 마운트 시 기존 사용자 찾기
+  useEffect(() => {
+    const initializeUser = async () => {
+      try {
+        // 기존 테스트 사용자가 있는지 확인
+        const user = await createTestUser.mutateAsync({
+          name: '테스트 사용자',
+          email: 'test@example.com'
+        })
+        setCurrentUser(user)
+      } catch (error) {
+        console.error('사용자 초기화 실패:', error)
+      }
+    }
+
+    if (!currentUser) {
+      initializeUser()
+    }
+  }, [currentUser, createTestUser])
 
   const handleGenerate = async () => {
-    if (!diaryContent.trim()) return
+    if (!diaryContent.trim() || !currentUser) return
 
     try {
-      // 1. 테스트 사용자 생성 (없을 때만)
-      const user = await createTestUser.mutateAsync({
-        name: '테스트 사용자',
-        email: 'test@example.com'
-      })
-      
-      setCurrentUser(user)
-
-      // 2. 테스트 일기 생성
+      // 1. 테스트 일기 생성
       const entry = await createTestEntry.mutateAsync({
-        userId: user.id,
+        userId: currentUser.id,
         content: diaryContent
       })
 
-      // 3. 엔그램 생성
+      // 2. 엔그램 생성
       const result = await generateEngrams.mutateAsync({
         diaryContent,
-        userId: user.id,
+        userId: currentUser.id,
         entryId: entry.id
       })
       
@@ -76,10 +93,11 @@ export function EngramGenerator() {
       {/* 생성 버튼 */}
       <button
         onClick={handleGenerate}
-        disabled={generateEngrams.isPending || !diaryContent.trim()}
+        disabled={generateEngrams.isPending || !diaryContent.trim() || !currentUser}
         className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50"
       >
-        {generateEngrams.isPending ? '엔그램 생성 중...' : '엔그램 생성'}
+        {generateEngrams.isPending ? '엔그램 생성 중...' : 
+         !currentUser ? '사용자 로딩 중...' : '엔그램 생성'}
       </button>
 
       {/* 에러 표시 */}
@@ -162,7 +180,74 @@ export function EngramGenerator() {
         {userEngrams && userEngrams.length > 0 ? (
           <div className="grid gap-4">
             {userEngrams.map((engram) => (
-              <EngramCard key={engram.id} engram={engram} />
+              <div key={engram.id}>
+                <EngramCard 
+                  engram={engram} 
+                  onEngramClick={setSelectedEngramId}
+                  isSelected={selectedEngramId === engram.id}
+                />
+                
+                {/* 선택된 엔그램 아래에 연결된 엔그램들 표시 */}
+                {selectedEngramId === engram.id && connectedEngrams && (
+                  <div className="mt-4 ml-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border-l-4 border-purple-300">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-semibold text-purple-800">
+                        🧠 연결된 기억들 (연상률 50% 이상)
+                      </h4>
+                      <button
+                        onClick={() => setSelectedEngramId(null)}
+                        className="text-purple-600 hover:text-purple-800 text-sm"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    
+                    {(connectedEngrams.outgoing.length > 0 || connectedEngrams.incoming.length > 0) ? (
+                      <div className="space-y-4">
+                        {connectedEngrams.outgoing.length > 0 && (
+                          <div>
+                            <h5 className="text-xs font-medium text-purple-700 mb-2">
+                              → 연상되는 기억들 ({connectedEngrams.outgoing.length}개)
+                            </h5>
+                            <div className="grid gap-2">
+                              {connectedEngrams.outgoing.map(({ synapse, engram }) => (
+                                <ConnectedEngramCard 
+                                  key={engram.id} 
+                                  engram={engram} 
+                                  synapse={synapse}
+                                  onEngramClick={setSelectedEngramId}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {connectedEngrams.incoming.length > 0 && (
+                          <div>
+                            <h5 className="text-xs font-medium text-purple-700 mb-2">
+                              ← 이 기억을 떠올리게 하는 기억들 ({connectedEngrams.incoming.length}개)
+                            </h5>
+                            <div className="grid gap-2">
+                              {connectedEngrams.incoming.map(({ synapse, engram }) => (
+                                <ConnectedEngramCard 
+                                  key={engram.id} 
+                                  engram={engram} 
+                                  synapse={synapse}
+                                  onEngramClick={setSelectedEngramId}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-purple-600 text-center py-2 text-sm">
+                        연상률 50% 이상의 연결된 기억이 없습니다.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         ) : (
@@ -173,7 +258,7 @@ export function EngramGenerator() {
   )
 }
 
-function EngramCard({ engram }: { 
+function EngramCard({ engram, onEngramClick, isSelected }: { 
   engram: {
     id: string
     content: string
@@ -182,54 +267,57 @@ function EngramCard({ engram }: {
     importance: number
     crebScore: number
     keywords: string[]
-    isStarred: boolean
     rehearsalCount: number
-  }
+  },
+  onEngramClick?: (engramId: string) => void
+  isSelected?: boolean
 }) {
-  const starMutation = trpc.engram.star.useMutation()
-  const unstarMutation = trpc.engram.unstar.useMutation()
   const rehearseMutation = trpc.engram.rehearse.useMutation()
-
-  const handleStar = () => {
-    if (engram.isStarred) {
-      unstarMutation.mutate({ id: engram.id })
-    } else {
-      starMutation.mutate({ id: engram.id })
-    }
-  }
+  const strengthenSynapsesMutation = trpc.engram.strengthenSynapses.useMutation()
 
   const handleRehearse = () => {
     rehearseMutation.mutate({ id: engram.id })
   }
 
+  const handleCardClick = () => {
+    // 시냅스 강화 및 연결된 엔그램 표시
+    strengthenSynapsesMutation.mutate({ engramId: engram.id })
+    onEngramClick?.(engram.id)
+  }
+
   return (
-    <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+    <div 
+      className={`border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer ${
+        isSelected 
+          ? 'border-purple-300 bg-purple-50 shadow-md' 
+          : 'border-gray-200'
+      }`}
+      onClick={handleCardClick}
+    >
       <div className="flex justify-between items-start mb-2">
         <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
           {engram.category}
         </span>
         <div className="flex gap-2">
           <button
-            onClick={handleStar}
-            className={`text-sm ${engram.isStarred ? 'text-yellow-500' : 'text-gray-400'}`}
-          >
-            ⭐
-          </button>
-          <button
-            onClick={handleRehearse}
+            onClick={(e) => {
+              e.stopPropagation()
+              handleRehearse()
+            }}
             className="text-sm text-blue-500 hover:text-blue-700"
+            title="기억 강화 (재열람)"
           >
             🔄
           </button>
         </div>
       </div>
       
-      <p className="text-gray-200 mb-3">{engram.content}</p>
+      <p className={`text-gray-200 mb-3 ${isSelected ? 'text-gray-700' : ''}`}>{engram.content}</p>
       
       <div className="flex gap-4 text-xs text-gray-500">
-        <span>감정: {engram.emotionScore.toFixed(1)}</span>
-        <span>중요도: {engram.importance.toFixed(1)}</span>
-        <span>CREB: {engram.crebScore.toFixed(1)}</span>
+        <span title="감정 점수 (-1.0 ~ +1.0)">감정: {engram.emotionScore.toFixed(1)}</span>
+        <span title="주관적 중요도 (0.0 ~ 1.0)">중요도: {engram.importance.toFixed(1)}</span>
+        <span title="생물학적 기억 강도 (0.0 ~ 1.0)">CREB: {engram.crebScore.toFixed(1)}</span>
         <span>재열람: {engram.rehearsalCount}회</span>
       </div>
       
@@ -239,6 +327,88 @@ function EngramCard({ engram }: {
             <span
               key={index}
               className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded"
+            >
+              {keyword}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ConnectedEngramCard({ engram, synapse, onEngramClick }: {
+  engram: {
+    id: string
+    content: string
+    category: string
+    emotionScore: number
+    importance: number
+    crebScore: number
+    keywords: string[]
+    rehearsalCount: number
+  },
+  synapse: {
+    id: string
+    strength: number
+    type: string
+  },
+  onEngramClick?: (engramId: string) => void
+}) {
+  const getSynapseTypeColor = (type: string) => {
+    switch (type) {
+      case 'SEMANTIC': return 'bg-blue-100 text-blue-700'
+      case 'EMOTIONAL': return 'bg-red-100 text-red-700'
+      case 'TEMPORAL': return 'bg-green-100 text-green-700'
+      case 'ASSOCIATIVE': return 'bg-purple-100 text-purple-700'
+      default: return 'bg-gray-100 text-gray-700'
+    }
+  }
+
+  const getSynapseTypeIcon = (type: string) => {
+    switch (type) {
+      case 'SEMANTIC': return '🔗'
+      case 'EMOTIONAL': return '💭'
+      case 'TEMPORAL': return '⏰'
+      case 'ASSOCIATIVE': return '🌟'
+      default: return '🔗'
+    }
+  }
+
+  return (
+    <div 
+      className="border border-purple-200 rounded-lg p-3 hover:shadow-md transition-all cursor-pointer bg-white/70"
+      onClick={() => onEngramClick?.(engram.id)}
+      style={{ opacity: 0.7 + (synapse.strength * 0.3) }} // 연결 강도에 따라 투명도 조절
+    >
+      <div className="flex justify-between items-start mb-2">
+        <div className="flex gap-2">
+          <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
+            {engram.category}
+          </span>
+          <span className={`text-xs px-2 py-1 rounded ${getSynapseTypeColor(synapse.type)}`}>
+            {getSynapseTypeIcon(synapse.type)} {synapse.type}
+          </span>
+        </div>
+        <div className="text-xs text-purple-600 font-medium">
+          연결강도: {(synapse.strength * 100).toFixed(0)}%
+        </div>
+      </div>
+      
+      <p className="text-gray-800 mb-2 text-sm">{engram.content}</p>
+      
+      <div className="flex gap-3 text-xs text-gray-500">
+        <span>감정: {engram.emotionScore.toFixed(1)}</span>
+        <span>중요도: {engram.importance.toFixed(1)}</span>
+        <span>CREB: {engram.crebScore.toFixed(1)}</span>
+      </div>
+      
+      <div className="mt-2">
+        <div className="flex flex-wrap gap-1">
+          {engram.keywords.slice(0, 3).map((keyword: string, index: number) => (
+            <span
+              key={index}
+              className="text-xs bg-purple-50 text-purple-600 px-1 py-0.5 rounded"
             >
               {keyword}
             </span>
