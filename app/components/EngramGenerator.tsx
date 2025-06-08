@@ -1,17 +1,19 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { trpc } from '../../server/trpc/client'
+import { useUser } from '../contexts/UserContext'
 
 
 export function EngramGenerator() {
   const [diaryContent, setDiaryContent] = useState('')
-  const [currentUser, setCurrentUser] = useState<{ id: string; email: string } | null>(null)
   const [selectedEngramId, setSelectedEngramId] = useState<string | null>(null)
+
+  // UserContext 사용
+  const { user: currentUser, isLoading: userLoading } = useUser()
 
   // tRPC 훅 사용
   const generateEngrams = trpc.engram.generate.useMutation()
-  const createTestUser = trpc.engram.createTestUser.useMutation()
   const createTestEntry = trpc.engram.createTestEntry.useMutation()
   const { data: userEngrams, refetch } = trpc.engram.getByUser.useQuery(
     { userId: currentUser?.id || '' },
@@ -21,26 +23,6 @@ export function EngramGenerator() {
     { engramId: selectedEngramId || '', minStrength: 0.5 },
     { enabled: !!selectedEngramId }
   )
-
-  // 컴포넌트 마운트 시 기존 사용자 찾기
-  useEffect(() => {
-    const initializeUser = async () => {
-      try {
-        // 기존 테스트 사용자가 있는지 확인
-        const user = await createTestUser.mutateAsync({
-          name: '테스트 사용자',
-          email: 'test@example.com'
-        })
-        setCurrentUser(user)
-      } catch (error) {
-        console.error('사용자 초기화 실패:', error)
-      }
-    }
-
-    if (!currentUser) {
-      initializeUser()
-    }
-  }, [currentUser, createTestUser])
 
   const handleGenerate = async () => {
     if (!diaryContent.trim() || !currentUser) return
@@ -73,9 +55,32 @@ export function EngramGenerator() {
     }
   }
 
+  // 로딩 중일 때 표시
+  if (userLoading) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-gray-600">사용자 정보를 불러오는 중...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-4xl mx-auto p-6">
       <h2 className="text-2xl font-bold mb-6">🧠 엔그램 생성기</h2>
+      
+      {/* 사용자 정보 표시 */}
+      {currentUser && (
+        <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
+          <p className="text-sm text-green-700">
+            👤 로그인됨: {currentUser.name} ({currentUser.email})
+          </p>
+        </div>
+      )}
       
       {/* 일기 입력 */}
       <div className="mb-6">
