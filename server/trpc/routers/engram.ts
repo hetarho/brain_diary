@@ -106,7 +106,8 @@ export const engramRouter = router({
   createTestEntry: publicProcedure
     .input(z.object({
       userId: z.string(),
-      content: z.string()
+      content: z.string(),
+      createdAt: z.string().optional() // 날짜 선택 옵션 추가
     }))
     .mutation(async ({ input }) => {
       try {
@@ -114,7 +115,8 @@ export const engramRouter = router({
         const entry = await prisma.entry.create({
           data: {
             content: input.content,
-            userId: input.userId
+            userId: input.userId,
+            createdAt: input.createdAt ? new Date(input.createdAt) : undefined
           }
         })
         return entry
@@ -208,19 +210,28 @@ export const engramRouter = router({
 - +1.0: 매우 긍정적 (행복, 감동, 환희)
 
 ### 4. 중요도 (0.0 ~ 1.0) - 주관적 의미
-- 개인에게 얼마나 의미 있는 사건인가? **매우 엄격하게 평가하세요**
-- 0.0-0.2: 일상적, 반복적인 내용 (대부분의 일상 경험)
+- 개인에게 얼마나 의미 있는 사건인가? **현실적으로 평가하세요**
+- 0.0-0.2: 일상적, 반복적인 내용 (매일 하는 루틴)
 - 0.3-0.4: 약간의 개인적 의미가 있는 내용
 - 0.5-0.6: 보통 수준의 개인적 의미 (기억할 만한 경험)
-- 0.7-0.8: 개인적으로 중요한 사건이나 깨달음 (드문 경험)
+- 0.7-0.8: 개인적으로 중요한 사건이나 깨달음 (특별한 경험)
 - 0.9: 매우 중요한 인생 사건 (1년에 몇 번 없는 일)
 - 1.0: 인생을 바꿀 만한 중대한 사건 (평생 몇 번 없는 일)
+
+**⚠️ 특별한 이벤트 인식 기준:**
+다음과 같은 요소가 포함되면 중요도를 높게 평가하세요:
+- **개인 이름 포함**: 친구, 가족 이름이 나오면 +0.2~0.3 보정
+- **특별한 이벤트**: 졸업, 공연, 생일, 결혼식, 여행 등 → 최소 0.5 이상
+- **처음 경험**: "처음으로", "새롭게" 등 → +0.2 보정
+- **감정적 순간**: 눈물, 감동, 깊은 대화 등 → +0.2~0.3 보정
+- **일회성 이벤트**: 반복되지 않는 특별한 순간 → +0.2 보정
 
 **중요도 평가 원칙:**
 - 일상적인 식사, 업무, 이동 등은 0.0-0.2
 - 평범한 감정 변화나 생각은 0.2-0.4
-- 특별한 만남이나 경험만 0.5 이상
-- 0.7 이상은 정말 특별한 경우에만 부여
+- 개인 이름이 포함된 만남이나 특별한 이벤트는 0.5 이상
+- 졸업공연, 생일파티, 여행 등은 0.6-0.8
+- 0.9 이상은 인생의 전환점 수준에만 부여
 
 ### 5. CREB 점수 (0.0 ~ 1.0) - 생물학적 기억 강도
 - 뇌에서 실제로 얼마나 강하게 기억될 가능성이 있는가?
@@ -229,6 +240,13 @@ export const engramRouter = router({
 - 0.4-0.6: 보통 수준의 감정적 반응
 - 0.7-0.9: 강한 감정적 충격이나 새로운 경험
 - 1.0: 트라우마급 강렬한 경험, 뇌에 깊이 각인될 수준
+
+**⚠️ CREB 점수 보정 기준:**
+- **특별한 이벤트** (졸업, 공연, 여행): +0.2~0.3 보정
+- **개인 이름 포함** (감정적 연결): +0.1~0.2 보정
+- **처음 경험** (새로움): +0.2~0.3 보정
+- **강한 감정** (눈물, 감동, 충격): +0.3~0.4 보정
+- **예상치 못한 상황**: +0.2 보정
 
 ### 6. 키워드 추출
 - 각 엔그램당 2-5개의 핵심 키워드
@@ -252,7 +270,8 @@ export const engramRouter = router({
 - 특별한 만남이나 대화
 - 의미 있는 성취나 실패
 - 감정적으로 움직이는 경험
-- 예시: "오랜 친구와 깊은 대화를 나눴다", "프로젝트를 성공적으로 마쳤다"
+- 개인 이름이 포함된 특별한 순간
+- 예시: "오랜 친구와 깊은 대화를 나눴다", "예진이 졸업공연을 보러 갔다", "프로젝트를 성공적으로 마쳤다"
 
 ### 0.7-0.8 (중요한 경험) - 매우 신중하게 부여
 - 인생에 영향을 주는 깨달음
@@ -546,13 +565,7 @@ export const engramRouter = router({
   strengthenSynapses: publicProcedure
     .input(z.object({ engramId: z.string() }))
     .mutation(async ({ input }) => {
-      // 1. 클릭된 엔그램의 재열람 횟수 증가
-      await prisma.engram.update({
-        where: { id: input.engramId },
-        data: { rehearsalCount: { increment: 1 } }
-      })
-
-      // 2. 연결된 시냅스들의 강도 증가
+      // 연결된 시냅스들의 강도만 증가 (재열람 증가는 제거)
       await prisma.synapse.updateMany({
         where: {
           OR: [
@@ -567,7 +580,6 @@ export const engramRouter = router({
         }
       })
 
-      // 3. 연결된 엔그램들의 재열람 횟수도 소폭 증가 (연상 활성화)
       const connectedSynapses = await prisma.synapse.findMany({
         where: {
           OR: [
@@ -576,18 +588,6 @@ export const engramRouter = router({
           ]
         }
       })
-
-      const connectedEngramIds = [
-        ...connectedSynapses.map(s => s.fromEngramId),
-        ...connectedSynapses.map(s => s.toEngramId)
-      ].filter(id => id !== input.engramId)
-
-      if (connectedEngramIds.length > 0) {
-        await prisma.engram.updateMany({
-          where: { id: { in: connectedEngramIds } },
-          data: { rehearsalCount: { increment: 1 } }
-        })
-      }
 
       return { strengthenedSynapses: connectedSynapses.length }
     }),
@@ -651,23 +651,87 @@ export const engramRouter = router({
       return { createdSynapses: createdSynapses.length }
     }),
 
+  // 사용자별 일기 조회
+  getEntriesByUser: publicProcedure
+    .input(z.object({ userId: z.string() }))
+    .query(async ({ input }) => {
+      const entries = await prisma.entry.findMany({
+        where: { userId: input.userId },
+        include: {
+          engrams: true, // 연결된 엔그램들도 함께 조회
+          _count: {
+            select: { engrams: true }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+      return entries
+    }),
+
+  // 일기 삭제 (연결된 엔그램과 시냅스도 함께 삭제됨)
+  deleteEntry: publicProcedure
+    .input(z.object({ entryId: z.string() }))
+    .mutation(async ({ input }) => {
+      // Prisma 스키마에서 onDelete: Cascade가 설정되어 있어서
+      // Entry 삭제 시 연결된 Engram과 Synapse도 자동으로 삭제됨
+      const deletedEntry = await prisma.entry.delete({
+        where: { id: input.entryId },
+        include: {
+          _count: {
+            select: { engrams: true }
+          }
+        }
+      })
+      return deletedEntry
+    }),
+
 
 })
 
 // 유틸리티 함수들
+
+// 카테고리별 희귀성 점수 (0.1 = 매우 일상적, 1.0 = 매우 희귀)
+function getCategoryRarityScore(category: string): number {
+  const rarityScores: Record<string, number> = {
+    TRAVEL: 0.9,      // 여행 - 매우 희귀
+    HOBBY: 0.7,       // 취미 - 희귀  
+    LEARNING: 0.6,    // 학습/깨달음 - 보통
+    EXPERIENCE: 0.5,  // 경험 - 보통
+    PERSON: 0.4,      // 사람 - 보통
+    PLACE: 0.4,       // 장소 - 보통
+    EMOTION: 0.3,     // 감정 - 일상적
+    RELATIONSHIP: 0.3, // 인간관계 - 일상적
+    WORK: 0.2,        // 업무 - 매우 일상적
+    FOOD: 0.1,        // 음식 - 매우 일상적
+    HEALTH: 0.2,      // 건강 - 일상적
+    OTHER: 0.3        // 기타 - 보통
+  }
+  return rarityScores[category] || 0.3
+}
+
 function calculateSimilarity(
   engram1: { keywords: string[]; emotionScore: number; category: string; createdAt: Date | string }, 
   engram2: { keywords: string[]; emotionScore: number; category: string; createdAt: Date | string }
 ): number {
   let similarity = 0
-  let factors = 0
+  let totalWeight = 0
 
-  // 1. 키워드 유사도 (가중치: 0.5) - 더 엄격하게
+  // 카테고리별 희귀성 점수 계산
+  const rarity1 = getCategoryRarityScore(engram1.category)
+  const rarity2 = getCategoryRarityScore(engram2.category)
+  const avgRarity = (rarity1 + rarity2) / 2
+
+  // 동적 가중치 계산 (희귀성에 따라 조정)
+  const keywordWeight = 0.4 + (0.3 * (1 - avgRarity))  // 0.4~0.7 범위 (일상적일수록 키워드 중요)
+  const emotionWeight = 0.2 + (0.1 * avgRarity)        // 0.2~0.3 범위 (희귀할수록 감정 중요)
+  const categoryWeight = 0.1 + (0.2 * avgRarity)       // 0.1~0.3 범위 (희귀할수록 카테고리 중요)
+  const timeWeight = 0.1                                // 시간은 고정
+
+  // 1. 키워드 유사도 (동적 가중치)
   const commonKeywords = engram1.keywords.filter((k: string) => 
     engram2.keywords.includes(k)
   ).length
   
-  // 최소 키워드 수 기준으로 계산 (더 엄격)
   const minKeywords = Math.min(engram1.keywords.length, engram2.keywords.length)
   const keywordSimilarity = minKeywords > 0 ? (commonKeywords / minKeywords) : 0
   
@@ -675,36 +739,35 @@ function calculateSimilarity(
   const keywordBonus = commonKeywords >= 2 ? 1.0 : 0.5
   const adjustedKeywordSimilarity = keywordSimilarity * keywordBonus
   
-  similarity += adjustedKeywordSimilarity * 0.5
-  factors += 0.5
+  similarity += adjustedKeywordSimilarity * keywordWeight
+  totalWeight += keywordWeight
 
-  // 2. 감정 유사도 (가중치: 0.25) - 더 엄격하게
+  // 2. 감정 유사도 (동적 가중치)
   const emotionDiff = Math.abs(engram1.emotionScore - engram2.emotionScore)
-  // 감정 차이가 0.5 이상이면 연결 약화
   const emotionSimilarity = emotionDiff < 0.5 ? (1 - emotionDiff) : 0.2
-  similarity += emotionSimilarity * 0.25
-  factors += 0.25
+  similarity += emotionSimilarity * emotionWeight
+  totalWeight += emotionWeight
 
-  // 3. 카테고리 유사도 (가중치: 0.15) - 가중치 감소
-  const categorySimilarity = engram1.category === engram2.category ? 0.8 : 0 // 1.0에서 0.8로 감소
-  similarity += categorySimilarity * 0.15
-  factors += 0.15
+  // 3. 카테고리 유사도 (동적 가중치 - 희귀할수록 중요)
+  const categorySimilarity = engram1.category === engram2.category ? 
+    (0.6 + (avgRarity * 0.4)) : 0  // 희귀한 카테고리일수록 0.6~1.0 점수
+  similarity += categorySimilarity * categoryWeight
+  totalWeight += categoryWeight
 
-  // 4. 시간적 근접성 (가중치: 0.1) - 더 엄격하게
+  // 4. 시간적 근접성 (고정 가중치)
   const timeDiff = Math.abs(
     new Date(engram1.createdAt).getTime() - new Date(engram2.createdAt).getTime()
   )
   const daysDiff = timeDiff / (1000 * 60 * 60 * 24)
-  // 7일 기준으로 단축, 더 빠른 감소
   const timeSimilarity = Math.max(0, 1 - (daysDiff / 7))
-  similarity += timeSimilarity * 0.1
-  factors += 0.1
+  similarity += timeSimilarity * timeWeight
+  totalWeight += timeWeight
 
-  const finalSimilarity = similarity / factors
+  const finalSimilarity = similarity / totalWeight
   
   // 최종 조정: 0.7 이상의 높은 점수는 더 엄격하게
   if (finalSimilarity > 0.7) {
-    return 0.7 + (finalSimilarity - 0.7) * 0.3 // 0.7 이상 부분을 30%로 압축
+    return 0.7 + (finalSimilarity - 0.7) * 0.3
   }
   
   return finalSimilarity
@@ -714,8 +777,12 @@ function determineSynapseType(
   engram1: { emotionScore: number; category: string; createdAt: Date | string }, 
   engram2: { emotionScore: number; category: string; createdAt: Date | string }
 ): 'SEMANTIC' | 'EMOTIONAL' | 'TEMPORAL' | 'ASSOCIATIVE' {
-  // 같은 카테고리면 의미적 연결
-  if (engram1.category === engram2.category) {
+  const rarity1 = getCategoryRarityScore(engram1.category)
+  const rarity2 = getCategoryRarityScore(engram2.category)
+  const avgRarity = (rarity1 + rarity2) / 2
+  
+  // 같은 카테고리이고 희귀한 카테고리면 의미적 연결 우선
+  if (engram1.category === engram2.category && avgRarity > 0.5) {
     return 'SEMANTIC'
   }
   
@@ -732,6 +799,11 @@ function determineSynapseType(
   const daysDiff = timeDiff / (1000 * 60 * 60 * 24)
   if (daysDiff < 1) {
     return 'TEMPORAL'
+  }
+  
+  // 같은 카테고리이지만 일상적인 카테고리면 연상 연결
+  if (engram1.category === engram2.category && avgRarity <= 0.5) {
+    return 'ASSOCIATIVE'
   }
   
   // 기본값은 연상 연결

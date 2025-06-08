@@ -8,6 +8,11 @@ import { useUser } from '../contexts/UserContext'
 export function EngramGenerator() {
   const [diaryContent, setDiaryContent] = useState('')
   const [selectedEngramId, setSelectedEngramId] = useState<string | null>(null)
+  const [selectedDate, setSelectedDate] = useState(() => {
+    // 기본값을 오늘 날짜로 설정
+    const today = new Date()
+    return today.toISOString().split('T')[0] // YYYY-MM-DD 형식
+  })
 
   // UserContext 사용
   const { user: currentUser, isLoading: userLoading } = useUser()
@@ -15,7 +20,12 @@ export function EngramGenerator() {
   // tRPC 훅 사용
   const generateEngrams = trpc.engram.generate.useMutation()
   const createTestEntry = trpc.engram.createTestEntry.useMutation()
+  const deleteEntry = trpc.engram.deleteEntry.useMutation()
   const { data: userEngrams, refetch } = trpc.engram.getByUser.useQuery(
+    { userId: currentUser?.id || '' },
+    { enabled: !!currentUser?.id }
+  )
+  const { data: userEntries, refetch: refetchEntries } = trpc.engram.getEntriesByUser.useQuery(
     { userId: currentUser?.id || '' },
     { enabled: !!currentUser?.id }
   )
@@ -31,7 +41,8 @@ export function EngramGenerator() {
       // 1. 테스트 일기 생성
       const entry = await createTestEntry.mutateAsync({
         userId: currentUser.id,
-        content: diaryContent
+        content: diaryContent,
+        createdAt: selectedDate
       })
 
       // 2. 엔그램 생성
@@ -50,6 +61,7 @@ export function EngramGenerator() {
       
       setDiaryContent('')
       refetch() // 엔그램 목록 새로고침
+      refetchEntries() // 일기 목록 새로고침
     } catch (error) {
       console.error('엔그램 생성 실패:', error)
     }
@@ -84,14 +96,30 @@ export function EngramGenerator() {
       
       {/* 일기 입력 */}
       <div className="mb-6">
-        <label className="block text-sm font-medium mb-2">
-          일기 내용을 입력하세요
-        </label>
+        <div className="flex gap-4 mb-4">
+          <div className="flex-1">
+            <label className="block text-sm font-medium mb-2">
+              일기 내용을 입력하세요
+            </label>
+          </div>
+          <div className="w-48">
+            <label className="block text-sm font-medium mb-2">
+              📅 일기 날짜
+            </label>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              max={new Date().toISOString().split('T')[0]} // 오늘 이후 날짜는 선택 불가
+            />
+          </div>
+        </div>
         <textarea
           value={diaryContent}
           onChange={(e) => setDiaryContent(e.target.value)}
           className="w-full h-32 p-3 border border-gray-300 rounded-lg resize-none"
-          placeholder="오늘 하루 어떤 일이 있었나요?"
+          placeholder="어떤 일이 있었나요?"
         />
       </div>
 
@@ -112,9 +140,36 @@ export function EngramGenerator() {
         </div>
       )}
 
+      {/* 생성된 일기들 */}
+      <div className="mt-8">
+        <h3 className="text-xl font-semibold mb-4">📝 생성된 일기들</h3>
+        
+        {userEntries && userEntries.length > 0 ? (
+          <div className="grid gap-4 mb-8">
+            {userEntries.map((entry) => (
+              <EntryCard 
+                key={entry.id} 
+                entry={entry} 
+                onDelete={async (entryId) => {
+                  try {
+                    await deleteEntry.mutateAsync({ entryId })
+                    refetchEntries() // 일기 목록 새로고침
+                    refetch() // 엔그램 목록도 새로고침
+                  } catch (error) {
+                    console.error('일기 삭제 실패:', error)
+                  }
+                }}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-500 mb-8">아직 작성된 일기가 없습니다.</p>
+        )}
+      </div>
+
       {/* 엔그램 목록 */}
       <div className="mt-8">
-        <h3 className="text-xl font-semibold mb-4">생성된 엔그램들</h3>
+        <h3 className="text-xl font-semibold mb-4">🧠 생성된 엔그램들</h3>
         
         {/* 최근 분석 결과 표시 */}
         {generateEngrams.data?.analysis && (
@@ -280,6 +335,24 @@ function EngramCard({ engram, onEngramClick, isSelected }: {
   const rehearseMutation = trpc.engram.rehearse.useMutation()
   const strengthenSynapsesMutation = trpc.engram.strengthenSynapses.useMutation()
 
+  const getCategoryRarityInfo = (category: string) => {
+    const rarityScores: Record<string, { score: number; label: string; color: string }> = {
+      TRAVEL: { score: 0.9, label: '매우 희귀', color: 'bg-red-100 text-red-700' },
+      HOBBY: { score: 0.7, label: '희귀', color: 'bg-orange-100 text-orange-700' },
+      LEARNING: { score: 0.6, label: '보통', color: 'bg-yellow-100 text-yellow-700' },
+      EXPERIENCE: { score: 0.5, label: '보통', color: 'bg-yellow-100 text-yellow-700' },
+      PERSON: { score: 0.4, label: '보통', color: 'bg-yellow-100 text-yellow-700' },
+      PLACE: { score: 0.4, label: '보통', color: 'bg-yellow-100 text-yellow-700' },
+      EMOTION: { score: 0.3, label: '일상적', color: 'bg-green-100 text-green-700' },
+      RELATIONSHIP: { score: 0.3, label: '일상적', color: 'bg-green-100 text-green-700' },
+      WORK: { score: 0.2, label: '매우 일상적', color: 'bg-blue-100 text-blue-700' },
+      FOOD: { score: 0.1, label: '매우 일상적', color: 'bg-blue-100 text-blue-700' },
+      HEALTH: { score: 0.2, label: '매우 일상적', color: 'bg-blue-100 text-blue-700' },
+      OTHER: { score: 0.3, label: '일상적', color: 'bg-green-100 text-green-700' }
+    }
+    return rarityScores[category] || { score: 0.3, label: '일상적', color: 'bg-green-100 text-green-700' }
+  }
+
   const handleRehearse = () => {
     rehearseMutation.mutate({ id: engram.id })
   }
@@ -300,9 +373,14 @@ function EngramCard({ engram, onEngramClick, isSelected }: {
       onClick={handleCardClick}
     >
       <div className="flex justify-between items-start mb-2">
-        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-          {engram.category}
-        </span>
+        <div className="flex gap-2">
+          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+            {engram.category}
+          </span>
+          <span className={`text-xs px-2 py-1 rounded ${getCategoryRarityInfo(engram.category).color}`}>
+            {getCategoryRarityInfo(engram.category).label}
+          </span>
+        </div>
         <div className="flex gap-2">
           <button
             onClick={(e) => {
@@ -338,6 +416,111 @@ function EngramCard({ engram, onEngramClick, isSelected }: {
           ))}
         </div>
       </div>
+    </div>
+  )
+}
+
+function EntryCard({ entry, onDelete }: {
+  entry: {
+    id: string
+    content: string
+    createdAt: Date | string
+    _count: { engrams: number }
+  },
+  onDelete: (entryId: string) => void
+}) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  const formatDate = (date: Date | string) => {
+    const dateObj = new Date(date)
+    const today = new Date()
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    
+    // 오늘, 어제 표시
+    if (dateObj.toDateString() === today.toDateString()) {
+      return `오늘 (${dateObj.toLocaleString('ko-KR', { hour: '2-digit', minute: '2-digit' })})`
+    } else if (dateObj.toDateString() === yesterday.toDateString()) {
+      return `어제 (${dateObj.toLocaleString('ko-KR', { hour: '2-digit', minute: '2-digit' })})`
+    } else {
+      return dateObj.toLocaleString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }
+  }
+
+  const truncateContent = (content: string, maxLength: number = 100) => {
+    if (content.length <= maxLength) return content
+    return content.substring(0, maxLength) + '...'
+  }
+
+  return (
+    <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-white">
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+            📝 원본 일기
+          </span>
+          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+            🧠 {entry._count.engrams}개 엔그램
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="text-sm text-blue-500 hover:text-blue-700"
+            title={isExpanded ? "접기" : "전체 보기"}
+          >
+            {isExpanded ? "📄" : "📖"}
+          </button>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="text-sm text-red-500 hover:text-red-700"
+            title="일기 삭제"
+          >
+            🗑️
+          </button>
+        </div>
+      </div>
+
+      <div className="text-sm text-gray-500 mb-2">
+        {formatDate(entry.createdAt)}
+      </div>
+
+      <div className="text-gray-800 mb-3">
+        {isExpanded ? entry.content : truncateContent(entry.content)}
+      </div>
+
+      {/* 삭제 확인 모달 */}
+      {showDeleteConfirm && (
+        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-700 mb-3">
+            ⚠️ 이 일기를 삭제하면 연결된 {entry._count.engrams}개의 엔그램과 모든 시냅스도 함께 삭제됩니다. 정말 삭제하시겠습니까?
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                onDelete(entry.id)
+                setShowDeleteConfirm(false)
+              }}
+              className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600"
+            >
+              삭제
+            </button>
+            <button
+              onClick={() => setShowDeleteConfirm(false)}
+              className="px-3 py-1 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400"
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
