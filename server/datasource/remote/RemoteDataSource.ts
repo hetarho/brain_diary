@@ -7,6 +7,8 @@ import {
   MemoryType,
   Provider,
   Prisma,
+  EmotionTag,
+  EmotionType,
 } from "@prisma/client";
 
 // --- Domain-Level Types ---
@@ -30,12 +32,14 @@ export type DeletedEntryWithCount = Entry & {
 export type SynapseWithToEngram = Synapse & {
   toEngram: Engram & {
     user: User;
+    emotionTags: EmotionTag[];
   };
 };
 
 export type SynapseWithFromEngram = Synapse & {
   fromEngram: Engram & {
     user: User;
+    emotionTags: EmotionTag[];
   };
 };
 
@@ -60,9 +64,8 @@ export type CreateEntryInput = {
 export type EngramCoreData = {
   content: string;
   category: MemoryType;
-  emotionScore: number;
   importance: number;
-  crebScore: number;
+  currentStrength: number;
   keywords: string[];
 };
 
@@ -70,6 +73,15 @@ export type EngramCoreData = {
 export type CreateEngramInput = EngramCoreData & {
   userId: string;
   entryId: string;
+};
+
+// EmotionTag related types
+export type CreateEmotionTagInput = {
+  engramId: string;
+  emotion: EmotionType;
+  intensity: number;
+  valence: number;
+  arousal: number;
 };
 
 export type SynapseType = "SEMANTIC" | "EMOTIONAL" | "TEMPORAL" | "ASSOCIATIVE";
@@ -120,6 +132,10 @@ export interface RemoteDataSource {
   findEngramsByUser(userId: string): Promise<Engram[]>;
   findEngramsByEntry(entryId: string): Promise<Engram[]>;
   rehearseEngram(id: string): Promise<Engram>;
+
+  // EmotionTag methods
+  createEmotionTag(data: CreateEmotionTagInput): Promise<EmotionTag>;
+  getEmotionTagsByEngram(engramId: string): Promise<EmotionTag[]>;
 
   // Synapse methods
   createManySynapses(data: CreateManySynapsesInput): Promise<BatchPayload>;
@@ -193,12 +209,21 @@ class RemoteDataSourceImpl implements RemoteDataSource {
 
   // Engram methods
   async createEngram(data: CreateEngramInput): Promise<Engram> {
+    console.log('!!!!!!!!!!!!!!!!!!!!!!!!')
+    console.log(data.category)
     return this.prisma.engram.create({
       data: {
-        ...data,
-        embedding: Array.from({ length: 1536 }, () => Math.random() - 0.5), // Temporary embedding
+        content: data.content,
+        category: data.category,
+        importance: data.importance,
+        currentStrength: data.currentStrength,
+        keywords: data.keywords,
+        userId: data.userId,
+        entryId: data.entryId,
         rehearsalCount: 0,
         consolidationState: "FRESH",
+        lastActivatedAt: new Date(),
+        decayRate: 0.1,
       },
     });
   }
@@ -221,6 +246,9 @@ class RemoteDataSourceImpl implements RemoteDataSource {
   async findEngramsByUser(userId: string): Promise<Engram[]> {
     return this.prisma.engram.findMany({
       where: { userId },
+      include: {
+        emotionTags: true
+      },
       orderBy: { createdAt: "desc" },
     });
   }
@@ -228,6 +256,9 @@ class RemoteDataSourceImpl implements RemoteDataSource {
   async findEngramsByEntry(entryId: string): Promise<Engram[]> {
     return this.prisma.engram.findMany({
       where: { entryId },
+      include: {
+        emotionTags: true
+      },
       orderBy: { createdAt: "desc" },
     });
   }
@@ -240,6 +271,17 @@ class RemoteDataSourceImpl implements RemoteDataSource {
         importance: { increment: 0.1 },
         updatedAt: new Date(),
       },
+    });
+  }
+
+  // EmotionTag methods
+  async createEmotionTag(data: CreateEmotionTagInput): Promise<EmotionTag> {
+    return this.prisma.emotionTag.create({ data });
+  }
+
+  async getEmotionTagsByEngram(engramId: string): Promise<EmotionTag[]> {
+    return this.prisma.emotionTag.findMany({
+      where: { engramId },
     });
   }
 
@@ -266,6 +308,7 @@ class RemoteDataSourceImpl implements RemoteDataSource {
         toEngram: {
           include: {
             user: true,
+            emotionTags: true
           },
         },
       },
@@ -286,6 +329,7 @@ class RemoteDataSourceImpl implements RemoteDataSource {
         fromEngram: {
           include: {
             user: true,
+            emotionTags: true
           },
         },
       },
