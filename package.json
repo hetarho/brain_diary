@@ -13,7 +13,7 @@
     "db:studio": "prisma studio"
   },
   "prisma": {
-    "schema": "./server/prisma/schema.prisma"
+    "schema": "prisma/schema.prisma"
   },
   "dependencies": {
     "@google/genai": "^1.4.0",

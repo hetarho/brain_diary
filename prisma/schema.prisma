@@ -1,0 +1,180 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output = "./generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 사용자 모델 (구글/애플 로그인만 지원)
+model User {
+  id         String   @id @default(cuid())
+  name       String   // 사용자 이름
+  email      String   @unique // 이메일 (고유값)
+  provider   Provider // 로그인 제공자 (google, apple)
+  providerId String   // 제공자에서 받은 고유 ID
+  avatar     String?  // 프로필 이미지 URL (선택사항)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // 관계
+  entries         Entry[]         // 사용자가 작성한 원본 일기
+  engrams         Engram[]        // 엔그램 (기억의 최소 단위)
+  hippocampusStore HippocampusStore[] // 해마 임시 저장소
+  cortexStore     CortexStore[]   // 피질 장기 저장소
+
+  @@unique([provider, providerId])
+  @@map("users")
+}
+
+// 사용자 원본 입력 (일기 텍스트)
+model Entry {
+  id        String   @id @default(cuid())
+  content   String   // 사용자가 입력한 텍스트
+  userId    String   // 작성자
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 관계
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  engrams   Engram[] // 이 입력에서 생성된 엔그램들
+
+  @@map("entries")
+}
+
+// 엔그램 - 기억의 최소 단위 (뇌과학 기반)
+model Engram {
+  id              String         @id @default(cuid())
+  content         String         // 추출된 기억 내용
+  embedding       Float[]        // 벡터 임베딩 (패턴 분리/완성용)
+  
+  // 뇌과학적 속성
+  crebScore       Float          @default(0.5) // CREB 아날로그 - 생물학적 기억 강도
+  emotionScore    Float          @default(0.0) // 감정 강도 (-1 ~ +1)
+  importance      Float          @default(0.5) // 주관적 중요도
+  rehearsalCount  Int            @default(0)   // 재열람 횟수
+  
+  // 공고화 상태
+  consolidationState ConsolidationState @default(FRESH)
+  
+  // 메타데이터
+  category        MemoryType     // AI 분류 카테고리
+  keywords        String[]       // 추출된 키워드
+  
+  // 외래키
+  entryId         String         // 원본 입력
+  userId          String         // 소유자
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // 관계
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entry           Entry          @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  
+  // 시냅스 연결
+  synapseFrom     Synapse[]      @relation("FromEngram")
+  synapseTo       Synapse[]      @relation("ToEngram")
+  
+  // 저장소 연결
+  hippocampus     HippocampusStore? @relation("HippocampusEngram")
+  cortex          CortexStore?      @relation("CortexEngram")
+
+  @@map("engrams")
+}
+
+// 시냅스 - 엔그램 간 연결 (뇌처럼 기억들이 서로 연결)
+model Synapse {
+  id           String      @id @default(cuid())
+  fromEngramId String
+  toEngramId   String
+  strength     Float       @default(0.5) // 연결 강도 (0-1)
+  type         SynapseType @default(ASSOCIATIVE)
+  createdAt    DateTime    @default(now())
+
+  // 관계
+  fromEngram   Engram      @relation("FromEngram", fields: [fromEngramId], references: [id], onDelete: Cascade)
+  toEngram     Engram      @relation("ToEngram", fields: [toEngramId], references: [id], onDelete: Cascade)
+
+  @@unique([fromEngramId, toEngramId])
+  @@map("synapses")
+}
+
+// 해마 저장소 - 빠른 학습, 고해상도 (CLS 이론)
+model HippocampusStore {
+  id              String    @id @default(cuid())
+  engramId        String    @unique
+  rawData         Json      // 고해상도 원본 데이터
+  accessCount     Int       @default(0)   // 접근 횟수
+  lastAccessedAt  DateTime  @default(now())
+  expiresAt       DateTime  // 피질로 이동 예정 시간
+  createdAt       DateTime  @default(now())
+
+  // 관계
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  engram          Engram    @relation("HippocampusEngram", fields: [engramId], references: [id], onDelete: Cascade)
+
+  @@map("hippocampus_store")
+}
+
+// 피질 저장소 - 느린 학습, 일반화된 지식 (CLS 이론)
+model CortexStore {
+  id              String    @id @default(cuid())
+  engramId        String    @unique
+  compressedData  Json      // 압축/요약된 데이터
+  generalization  Float     @default(0.0) // 일반화 정도
+  integratedAt    DateTime  // 피질 통합 시간
+  createdAt       DateTime  @default(now())
+
+  // 관계
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  engram          Engram    @relation("CortexEngram", fields: [engramId], references: [id], onDelete: Cascade)
+
+  @@map("cortex_store")
+}
+
+// ENUMS
+
+enum Provider {
+  GOOGLE
+  APPLE
+}
+
+enum MemoryType {
+  EXPERIENCE    // 경험/사건
+  EMOTION       // 감정
+  PERSON        // 사람
+  PLACE         // 장소
+  LEARNING      // 학습/깨달음
+  WORK          // 업무
+  RELATIONSHIP  // 인간관계
+  HOBBY         // 취미/여가
+  HEALTH        // 건강
+  FOOD          // 음식
+  TRAVEL        // 여행
+  OTHER         // 기타
+}
+
+enum ConsolidationState {
+  FRESH         // 새로 생성됨 (해마)
+  CONSOLIDATING // 공고화 중 (해마→피질 이동)
+  CONSOLIDATED  // 공고화 완료 (피질)
+  DECAYING      // 망각 중
+}
+
+enum SynapseType {
+  ASSOCIATIVE   // 연상 연결
+  TEMPORAL      // 시간적 연결
+  EMOTIONAL     // 감정적 연결
+  SEMANTIC      // 의미적 연결
+}

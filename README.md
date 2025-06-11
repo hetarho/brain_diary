@@ -29,18 +29,13 @@ Brain은 실제 뇌의 기억 처리 방식을 모방하여 일기를 작은 기
 - **React 19**
 - **TypeScript**
 - **Tailwind CSS**
-- **tRPC** (타입 안전한 API)
+- **tRPC** 
 
 ### Backend
 - **tRPC Server**
 - **Prisma ORM**
-- **PostgreSQL** (Supabase)
+- **PostgreSQL** 
 - **Gemini 2.0 Flash API**
-
-### 아키텍처
-- **클린 아키텍처** (전체 프로젝트)
-- **레이어드 아키텍처** (LLM 엔진)
-- **의존성 역전 원칙** 적용
 
 ## 🚀 시작하기
 
@@ -67,8 +62,9 @@ DATABASE_URL=postgresql://postgres:your-password@db.your-project-id.supabase.co:
 # Prisma 클라이언트 생성
 npm run db:generate
 
-# 스키마를 데이터베이스에 푸시
-npm run db:push
+# 스키마를 데이터베이스에 마이그레이션
+# (로컬 DB에 테이블 등을 생성합니다)
+npm run db:migrate
 ```
 
 ### 4. 개발 서버 실행
@@ -148,33 +144,42 @@ npm start
 # 린팅
 npm run lint
 
-# Prisma 클라이언트 생성
+# Prisma 클라이언트 생성 (schema.prisma 변경 후 항상 실행)
 npm run db:generate
 
-# 데이터베이스 스키마 푸시
+# 데이터베이스 스키마 푸시 (프로토타이핑용, 마이그레이션 파일 없음)
+# 경고: 프로덕션 환경에서는 사용하지 마세요.
 npm run db:push
 
-# 데이터베이스 마이그레이션
+# 데이터베이스 마이그레이션 (버전 관리되는 정식 스키마 변경)
 npm run db:migrate
 
-# Prisma Studio 실행
+# Prisma Studio 실행 (DB GUI)
 npm run db:studio
 ```
 
 ## 🚀 배포
 
-### Vercel + Supabase (권장)
-1. Vercel에 프로젝트 연결
-2. 환경변수 설정
-3. 자동 배포
+이 프로젝트는 **Vercel**과 **Supabase**를 사용하여 배포하는 것을 권장합니다.
 
-### 환경변수 설정 (배포용)
-```bash
-GEMINI_API_KEY=your-gemini-api-key
-NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-DATABASE_URL=your-supabase-database-url
-```
+### 1. Supabase 데이터베이스 준비
+1.  Supabase 프로젝트를 생성합니다.
+2.  프로젝트의 **Database** 설정 페이지에서 **Connection string**을 복사합니다. 이 값이 `DATABASE_URL`이 됩니다.
+
+### 2. Vercel 프로젝트 설정
+1.  GitHub 저장소를 Vercel에 연결하여 새 프로젝트를 생성합니다.
+2.  Vercel 프로젝트의 **Settings > Environment Variables** 메뉴에서 아래의 환경변수들을 등록합니다.
+
+| 환경변수 | 값 | 설명 |
+| :--- | :--- | :--- |
+| `DATABASE_URL` | `postgresql://postgres:[YOUR-PASSWORD]@[...].supabase.co:5432/postgres` | Prisma가 DB에 연결하기 위한 **비밀 연결 문자열**. Supabase에서 복사한 값을 그대로 사용합니다. **절대 외부에 노출되면 안됩니다.** |
+| `GEMINI_API_KEY` | `your-gemini-api-key` | Google Gemini API 키. |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://[...].supabase.co` | Supabase 클라이언트(Front-end)용 URL. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `your-anon-key` | Supabase 클라이언트(Front-end)용 공개 키. |
+
+3.  Vercel은 `prisma`를 자동으로 인식하여, 배포 시 `npm run build` 스크립트가 실행될 때 `prisma generate`와 `prisma migrate deploy`를 자동으로 실행해줍니다. 따라서 별도의 배포 스크립트 설정은 필요하지 않습니다.
+
+4.  main 브랜치에 코드를 푸시하면 자동으로 빌드 및 배포가 진행됩니다.
 
 ## 🤝 기여하기
 

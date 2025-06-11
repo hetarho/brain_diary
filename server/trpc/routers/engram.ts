@@ -1,128 +1,137 @@
-import { z } from 'zod'
-import { router, publicProcedure } from '../trpc'
-import { LlmEngine } from '../../lib/llmengine'
-import { prisma } from '../../lib/prisma'
-import { v4 as uuidv4 } from 'uuid'
+import { z } from "zod";
+import { router, publicProcedure } from "../trpc";
+import { LlmEngine } from "../../lib/llmengine";
+import { v4 as uuidv4 } from "uuid";
+import RemoteDataSourceImpl from "../../datasource/remote/RemoteDataSource";
+import { prisma } from "../../../prisma/prisma";
+
+const dataSource = new RemoteDataSourceImpl(prisma);
 
 // Zod 스키마 정의
 const generateEngramsSchema = z.object({
   diaryContent: z.string().min(10),
   userId: z.string(),
-  entryId: z.string()
-})
+  entryId: z.string(),
+});
 
 export const engramRouter = router({
   // 테스트 사용자 생성 (개발용)
   createTestUser: publicProcedure
-    .input(z.object({ 
-      name: z.string().default('테스트 사용자'),
-      email: z.string().email()
-    }))
+    .input(
+      z.object({
+        name: z.string().default("테스트 사용자"),
+        email: z.string().email(),
+      })
+    )
     .mutation(async ({ input }) => {
-      console.log('🔍 createTestUser 시작:', input)
-      
+      console.log("🔍 createTestUser 시작:", input);
+
       try {
-        console.log('📊 Prisma 연결 상태 확인 중...')
-        
+        console.log("📊 Prisma 연결 상태 확인 중...");
+
         // 데이터베이스 연결 테스트
-        await prisma.$connect()
-        console.log('✅ Prisma 연결 성공')
-        
-        console.log('🔍 기존 사용자 검색 중:', input.email)
-        
+        await prisma.$connect();
+        console.log("✅ Prisma 연결 성공");
+
+        console.log("🔍 기존 사용자 검색 중:", input.email);
+
         // 이메일로 이미 존재하는지 확인
-        const existingUser = await prisma.user.findFirst({
-          where: { email: input.email }
-        })
-        
+        const existingUser = await dataSource.findUserByEmail(input.email);
+
         if (existingUser) {
-          console.log('✅ 기존 사용자 발견:', existingUser.id)
-          return existingUser
+          console.log("✅ 기존 사용자 발견:", existingUser.id);
+          return existingUser;
         }
 
-        console.log('🆕 새 사용자 생성 중...')
-        const newUserId = uuidv4()
-        const newProviderId = uuidv4()
-        
-        console.log('📝 사용자 데이터:', {
-          id: newUserId,
+        console.log("🆕 새 사용자 생성 중...");
+        const newProviderId = uuidv4();
+
+        console.log("📝 사용자 데이터:", {
           name: input.name,
           email: input.email,
-          provider: 'GOOGLE',
-          providerId: newProviderId
-        })
+          provider: "GOOGLE",
+          providerId: newProviderId,
+        });
 
-        // 새 사용자 생성 (UUID 사용)
-        const user = await prisma.user.create({
-          data: {
-            id: newUserId,
-            name: input.name,
-            email: input.email,
-            provider: 'GOOGLE',
-            providerId: newProviderId
-          }
-        })
-        
-        console.log('✅ 사용자 생성 성공:', user.id)
-        return user
+        // 새 사용자 생성
+        const user = await dataSource.createUser({
+          name: input.name,
+          email: input.email,
+          provider: "GOOGLE",
+          providerId: newProviderId,
+        });
+
+        console.log("✅ 사용자 생성 성공:", user.id);
+        return user;
       } catch (error) {
-        console.error('❌ User creation error:', error)
-        console.error('🔍 Error details:', {
-          message: error instanceof Error ? error.message : 'Unknown error',
+        console.error("❌ User creation error:", error);
+        console.error("🔍 Error details:", {
+          message: error instanceof Error ? error.message : "Unknown error",
           stack: error instanceof Error ? error.stack : undefined,
-          code: error && typeof error === 'object' && 'code' in error ? error.code : undefined,
-          meta: error && typeof error === 'object' && 'meta' in error ? error.meta : undefined,
-          name: error instanceof Error ? error.name : undefined
-        })
-        
+          code:
+            error && typeof error === "object" && "code" in error
+              ? error.code
+              : undefined,
+          meta:
+            error && typeof error === "object" && "meta" in error
+              ? error.meta
+              : undefined,
+          name: error instanceof Error ? error.name : undefined,
+        });
+
         // Prisma 특정 에러 처리
-        if (error && typeof error === 'object' && 'code' in error) {
-          const prismaError = error as { code: string; meta?: unknown }
-          console.error('🔍 Prisma 에러 코드:', prismaError.code)
-          
+        if (error && typeof error === "object" && "code" in error) {
+          const prismaError = error as { code: string; meta?: unknown };
+          console.error("🔍 Prisma 에러 코드:", prismaError.code);
+
           switch (prismaError.code) {
-            case 'P1001':
-              console.error('❌ 데이터베이스 연결 실패 - 서버에 접근할 수 없습니다')
-              break
-            case 'P1008':
-              console.error('❌ 데이터베이스 연결 시간 초과')
-              break
-            case 'P1017':
-              console.error('❌ 데이터베이스 서버가 닫혔습니다')
-              break
-            case 'P2002':
-              console.error('❌ 고유 제약 조건 위반 (중복 데이터)')
-              break
+            case "P1001":
+              console.error(
+                "❌ 데이터베이스 연결 실패 - 서버에 접근할 수 없습니다"
+              );
+              break;
+            case "P1008":
+              console.error("❌ 데이터베이스 연결 시간 초과");
+              break;
+            case "P1017":
+              console.error("❌ 데이터베이스 서버가 닫혔습니다");
+              break;
+            case "P2002":
+              console.error("❌ 고유 제약 조건 위반 (중복 데이터)");
+              break;
             default:
-              console.error('❌ 알 수 없는 Prisma 에러:', prismaError.code)
+              console.error("❌ 알 수 없는 Prisma 에러:", prismaError.code);
           }
         }
-        
-        throw new Error(`사용자 생성 중 오류가 발생했습니다: ${error instanceof Error ? error.message : 'Unknown error'}`)
+
+        throw new Error(
+          `사용자 생성 중 오류가 발생했습니다: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
       }
     }),
 
   // 테스트 일기 생성 (개발용)
   createTestEntry: publicProcedure
-    .input(z.object({
-      userId: z.string(),
-      content: z.string(),
-      createdAt: z.string().optional() // 날짜 선택 옵션 추가
-    }))
+    .input(
+      z.object({
+        userId: z.string(),
+        content: z.string(),
+        createdAt: z.string().optional(), // 날짜 선택 옵션 추가
+      })
+    )
     .mutation(async ({ input }) => {
       try {
-        // 새 일기 생성 (ID는 자동 생성)
-        const entry = await prisma.entry.create({
-          data: {
-            content: input.content,
-            userId: input.userId,
-            createdAt: input.createdAt ? new Date(input.createdAt) : undefined
-          }
-        })
-        return entry
+        // 새 일기 생성 (ID와 createdAt은 자동 생성)
+        const entry = await dataSource.createEntry({
+          content: input.content,
+          userId: input.userId,
+        });
+        return entry;
       } catch (error) {
-        console.error('Entry creation error:', error)
-        throw new Error('일기 생성 중 오류가 발생했습니다')
+        console.error("Entry creation error:", error);
+        throw new Error("일기 생성 중 오류가 발생했습니다");
       }
     }),
 
@@ -132,8 +141,8 @@ export const engramRouter = router({
     .mutation(async ({ input }) => {
       try {
         // LLM 엔진으로 엔그램 생성
-        const llm = new LlmEngine(process.env.GEMINI_API_KEY!)
-        
+        const llm = new LlmEngine(process.env.GEMINI_API_KEY!);
+
         const systemMessage = `당신은 뇌과학 전문가이자 기억 분석 AI입니다. 사용자의 일기를 분석하여 뇌과학 이론에 기반한 엔그램(기억의 최소 단위)으로 분해해주세요.
 
 ## ⚠️ 중요도 평가 주의사항
@@ -378,84 +387,78 @@ export const engramRouter = router({
     "keyThemes": ["가족관계", "감정적 유대", "자기성찰"],
     "memoryStrength": "STRONG"
   }
-}`
+}`;
 
         const response = await llm.promptWithSystem(
           `다음 일기를 분석하여 엔그램으로 분해해주세요:\n\n${input.diaryContent}`,
           systemMessage
-        )
+        );
 
         if (!response.success || !response.content) {
-          throw new Error('엔그램 생성에 실패했습니다')
+          throw new Error("엔그램 생성에 실패했습니다");
         }
 
         // 마크다운 코드 블록 제거 함수
         const cleanJsonString = (str: string): string => {
           // ```json과 ``` 제거
           return str
-            .replace(/```json\s*/g, '')
-            .replace(/```\s*/g, '')
-            .trim()
-        }
+            .replace(/```json\s*/g, "")
+            .replace(/```\s*/g, "")
+            .trim();
+        };
 
         // JSON 파싱
-        const cleanedContent = cleanJsonString(response.content)
-        console.log('Cleaned content:', cleanedContent) // 디버깅용
-        const result = JSON.parse(cleanedContent)
-        
+        const cleanedContent = cleanJsonString(response.content);
+        console.log("Cleaned content:", cleanedContent); // 디버깅용
+        const result = JSON.parse(cleanedContent);
+
         // 데이터베이스에 저장
-        const savedEngrams = []
+        const savedEngrams = [];
         for (const engramData of result.engrams) {
-          const engram = await prisma.engram.create({
-            data: {
-              content: engramData.content,
-              category: engramData.category,
-              emotionScore: engramData.emotionScore,
-              importance: engramData.importance,
-              crebScore: engramData.crebScore,
-              keywords: engramData.keywords,
-              embedding: Array.from({ length: 1536 }, () => Math.random() - 0.5), // 임시 임베딩
-              rehearsalCount: 0,
-              consolidationState: 'FRESH',
-              entryId: input.entryId,
-              userId: input.userId
-            }
-          })
-          savedEngrams.push(engram)
+          const engram = await dataSource.createEngram({
+            content: engramData.content,
+            category: engramData.category,
+            emotionScore: engramData.emotionScore,
+            importance: engramData.importance,
+            crebScore: engramData.crebScore,
+            keywords: engramData.keywords,
+            entryId: input.entryId,
+            userId: input.userId,
+          });
+          savedEngrams.push(engram);
         }
 
         // 새로 생성된 엔그램들 간의 시냅스 생성
         for (const engram of savedEngrams) {
           // 기존 엔그램들과의 시냅스 생성
-          const existingEngrams = await prisma.engram.findMany({
-            where: {
-              userId: input.userId,
-              id: { not: engram.id }
-            }
-          })
+          const existingEngrams = await dataSource.findEngrams({
+            userId: input.userId,
+            id: { not: engram.id },
+          });
 
           for (const existingEngram of existingEngrams) {
-            const similarity = calculateSimilarity(engram, existingEngram)
-            
-            if (similarity > 0.4) { // 임계값을 0.3에서 0.4로 상향
+            const similarity = calculateSimilarity(engram, existingEngram);
+
+            if (similarity > 0.4) {
+              // 임계값을 0.3에서 0.4로 상향
               // 양방향 시냅스 생성
-              await prisma.synapse.createMany({
-                data: [
+              await dataSource.createManySynapses({
+                synapses: [
                   {
                     fromEngramId: engram.id,
                     toEngramId: existingEngram.id,
                     strength: similarity,
-                    type: determineSynapseType(engram, existingEngram)
+                    type: determineSynapseType(engram, existingEngram),
                   },
                   {
                     fromEngramId: existingEngram.id,
                     toEngramId: engram.id,
                     strength: similarity,
-                    type: determineSynapseType(existingEngram, engram)
-                  }
+                    type: determineSynapseType(existingEngram, engram),
+                  },
                 ],
-                skipDuplicates: true
-              })
+                skipDuplicates: true,
+              });
             }
           }
         }
@@ -464,12 +467,11 @@ export const engramRouter = router({
           success: true,
           engrams: savedEngrams,
           analysis: result.analysis,
-          classification: result.classification
-        }
-
+          classification: result.classification,
+        };
       } catch (error) {
-        console.error('Engram generation error:', error)
-        throw new Error('엔그램 생성 중 오류가 발생했습니다')
+        console.error("Engram generation error:", error);
+        throw new Error("엔그램 생성 중 오류가 발생했습니다");
       }
     }),
 
@@ -477,88 +479,57 @@ export const engramRouter = router({
   getByUser: publicProcedure
     .input(z.object({ userId: z.string() }))
     .query(async ({ input }) => {
-      const engrams = await prisma.engram.findMany({
-        where: { userId: input.userId },
-        orderBy: { createdAt: 'desc' }
-      })
-      return engrams
+      const engrams = await dataSource.findEngramsByUser(input.userId);
+      return engrams;
     }),
 
   // 일기별 엔그램 조회
   getByEntry: publicProcedure
     .input(z.object({ entryId: z.string() }))
     .query(async ({ input }) => {
-      const engrams = await prisma.engram.findMany({
-        where: { entryId: input.entryId },
-        orderBy: { createdAt: 'desc' }
-      })
-      return engrams
+      const engrams = await dataSource.findEngramsByEntry(input.entryId);
+      return engrams;
     }),
 
   // 엔그램 재열람 (기억 강화)
   rehearse: publicProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input }) => {
-      const engram = await prisma.engram.update({
-        where: { id: input.id },
-        data: {
-          rehearsalCount: { increment: 1 },
-          importance: { increment: 0.1 },
-          updatedAt: new Date()
-        }
-      })
-      return engram
+      const engram = await dataSource.rehearseEngram(input.id);
+      return engram;
     }),
 
   // 연결된 엔그램 조회 (시냅스 네트워크)
   getConnectedEngrams: publicProcedure
-    .input(z.object({ 
-      engramId: z.string(),
-      minStrength: z.number().min(0).max(1).optional().default(0.3)
-    }))
+    .input(
+      z.object({
+        engramId: z.string(),
+        minStrength: z.number().min(0).max(1).optional().default(0.3),
+      })
+    )
     .query(async ({ input }) => {
       // 해당 엔그램에서 나가는 시냅스들
-      const outgoingSynapses = await prisma.synapse.findMany({
-        where: {
-          fromEngramId: input.engramId,
-          strength: { gte: input.minStrength }
-        },
-        include: {
-          toEngram: {
-            include: {
-              user: true
-            }
-          }
-        },
-        orderBy: { strength: 'desc' }
-      })
+      const outgoingSynapses = await dataSource.getOutgoingSynapses(
+        input.engramId,
+        input.minStrength
+      );
 
       // 해당 엔그램으로 들어오는 시냅스들
-      const incomingSynapses = await prisma.synapse.findMany({
-        where: {
-          toEngramId: input.engramId,
-          strength: { gte: input.minStrength }
-        },
-        include: {
-          fromEngram: {
-            include: {
-              user: true
-            }
-          }
-        },
-        orderBy: { strength: 'desc' }
-      })
+      const incomingSynapses = await dataSource.getIncomingSynapses(
+        input.engramId,
+        input.minStrength
+      );
 
       return {
-        outgoing: outgoingSynapses.map(s => ({
+        outgoing: outgoingSynapses.map((s) => ({
           synapse: s,
-          engram: s.toEngram
+          engram: s.toEngram,
         })),
-        incoming: incomingSynapses.map(s => ({
+        incoming: incomingSynapses.map((s) => ({
           synapse: s,
-          engram: s.fromEngram
-        }))
-      }
+          engram: s.fromEngram,
+        })),
+      };
     }),
 
   // 시냅스 강화 (엔그램 클릭 시 연결된 기억들도 함께 강화)
@@ -566,106 +537,72 @@ export const engramRouter = router({
     .input(z.object({ engramId: z.string() }))
     .mutation(async ({ input }) => {
       // 연결된 시냅스들의 강도만 증가 (재열람 증가는 제거)
-      await prisma.synapse.updateMany({
-        where: {
-          OR: [
-            { fromEngramId: input.engramId },
-            { toEngramId: input.engramId }
-          ]
-        },
-        data: {
-          strength: {
-            increment: 0.05 // 시냅스 강도 0.05씩 증가
-          }
-        }
-      })
+      const result = await dataSource.strengthenSynapses(input.engramId);
 
-      const connectedSynapses = await prisma.synapse.findMany({
-        where: {
-          OR: [
-            { fromEngramId: input.engramId },
-            { toEngramId: input.engramId }
-          ]
-        }
-      })
-
-      return { strengthenedSynapses: connectedSynapses.length }
+      // This part of the original logic is difficult to replicate
+      // because updateMany does not return the updated records.
+      // We are returning the count of affected rows instead.
+      return { strengthenedSynapses: result.count };
     }),
 
   // 엔그램 간 시냅스 생성 (유사도 기반)
   createSynapses: publicProcedure
-    .input(z.object({ 
-      engramId: z.string(),
-      targetEngramIds: z.array(z.string()).optional()
-    }))
-    .mutation(async ({ input }) => {
-      const sourceEngram = await prisma.engram.findUnique({
-        where: { id: input.engramId }
+    .input(
+      z.object({
+        engramId: z.string(),
+        targetEngramIds: z.array(z.string()).optional(),
       })
+    )
+    .mutation(async ({ input }) => {
+      const sourceEngram = await dataSource.findEngramById(input.engramId);
 
       if (!sourceEngram) {
-        throw new Error('엔그램을 찾을 수 없습니다')
+        throw new Error("엔그램을 찾을 수 없습니다");
       }
 
       // 대상 엔그램들 (지정되지 않으면 같은 사용자의 모든 엔그램)
-      const targetEngrams = await prisma.engram.findMany({
-        where: {
-          userId: sourceEngram.userId,
-          id: input.targetEngramIds ? 
-            { in: input.targetEngramIds } : 
-            { not: input.engramId }
-        }
-      })
+      const targetEngrams = await dataSource.findEngrams({
+        userId: sourceEngram.userId,
+        id: input.targetEngramIds
+          ? { in: input.targetEngramIds }
+          : { not: input.engramId },
+      });
 
-      const createdSynapses = []
+      const createdSynapses = [];
 
       for (const targetEngram of targetEngrams) {
         // 유사도 계산
-        const similarity = calculateSimilarity(sourceEngram, targetEngram)
-        
-        if (similarity > 0.4) { // 임계값을 0.3에서 0.4로 상향
+        const similarity = calculateSimilarity(sourceEngram, targetEngram);
+
+        if (similarity > 0.4) {
+          // 임계값을 0.3에서 0.4로 상향
           // 기존 시냅스가 있는지 확인
-          const existingSynapse = await prisma.synapse.findUnique({
-            where: {
-              fromEngramId_toEngramId: {
-                fromEngramId: input.engramId,
-                toEngramId: targetEngram.id
-              }
-            }
-          })
+          const existingSynapse = await dataSource.findUniqueSynapse(
+            input.engramId,
+            targetEngram.id
+          );
 
           if (!existingSynapse) {
-            const synapse = await prisma.synapse.create({
-              data: {
-                fromEngramId: input.engramId,
-                toEngramId: targetEngram.id,
-                strength: similarity,
-                type: determineSynapseType(sourceEngram, targetEngram)
-              }
-            })
-            createdSynapses.push(synapse)
+            const synapse = await dataSource.createSynapse({
+              fromEngramId: input.engramId,
+              toEngramId: targetEngram.id,
+              strength: similarity,
+              type: determineSynapseType(sourceEngram, targetEngram),
+            });
+            createdSynapses.push(synapse);
           }
         }
       }
 
-      return { createdSynapses: createdSynapses.length }
+      return { createdSynapses: createdSynapses.length };
     }),
 
   // 사용자별 일기 조회
   getEntriesByUser: publicProcedure
     .input(z.object({ userId: z.string() }))
     .query(async ({ input }) => {
-      const entries = await prisma.entry.findMany({
-        where: { userId: input.userId },
-        include: {
-          engrams: true, // 연결된 엔그램들도 함께 조회
-          _count: {
-            select: { engrams: true }
-          }
-        },
-        orderBy: { createdAt: 'desc' }
-      })
-      return entries
+      const entries = await dataSource.getEntriesByUser(input.userId);
+      return entries;
     }),
 
   // 일기 삭제 (연결된 엔그램과 시냅스도 함께 삭제됨)
@@ -674,138 +611,144 @@ export const engramRouter = router({
     .mutation(async ({ input }) => {
       // Prisma 스키마에서 onDelete: Cascade가 설정되어 있어서
       // Entry 삭제 시 연결된 Engram과 Synapse도 자동으로 삭제됨
-      const deletedEntry = await prisma.entry.delete({
-        where: { id: input.entryId },
-        include: {
-          _count: {
-            select: { engrams: true }
-          }
-        }
-      })
-      return deletedEntry
+      const deletedEntry = await dataSource.deleteEntry(input.entryId);
+      return deletedEntry;
     }),
-
-
-})
+});
 
 // 유틸리티 함수들
 
 // 카테고리별 희귀성 점수 (0.1 = 매우 일상적, 1.0 = 매우 희귀)
 function getCategoryRarityScore(category: string): number {
   const rarityScores: Record<string, number> = {
-    TRAVEL: 0.9,      // 여행 - 매우 희귀
-    HOBBY: 0.7,       // 취미 - 희귀  
-    LEARNING: 0.6,    // 학습/깨달음 - 보통
-    EXPERIENCE: 0.5,  // 경험 - 보통
-    PERSON: 0.4,      // 사람 - 보통
-    PLACE: 0.4,       // 장소 - 보통
-    EMOTION: 0.3,     // 감정 - 일상적
+    TRAVEL: 0.9, // 여행 - 매우 희귀
+    HOBBY: 0.7, // 취미 - 희귀
+    LEARNING: 0.6, // 학습/깨달음 - 보통
+    EXPERIENCE: 0.5, // 경험 - 보통
+    PERSON: 0.4, // 사람 - 보통
+    PLACE: 0.4, // 장소 - 보통
+    EMOTION: 0.3, // 감정 - 일상적
     RELATIONSHIP: 0.3, // 인간관계 - 일상적
-    WORK: 0.2,        // 업무 - 매우 일상적
-    FOOD: 0.1,        // 음식 - 매우 일상적
-    HEALTH: 0.2,      // 건강 - 일상적
-    OTHER: 0.3        // 기타 - 보통
-  }
-  return rarityScores[category] || 0.3
+    WORK: 0.2, // 업무 - 매우 일상적
+    FOOD: 0.1, // 음식 - 매우 일상적
+    HEALTH: 0.2, // 건강 - 일상적
+    OTHER: 0.3, // 기타 - 보통
+  };
+  return rarityScores[category] || 0.3;
 }
 
 function calculateSimilarity(
-  engram1: { keywords: string[]; emotionScore: number; category: string; createdAt: Date | string }, 
-  engram2: { keywords: string[]; emotionScore: number; category: string; createdAt: Date | string }
+  engram1: {
+    keywords: string[];
+    emotionScore: number;
+    category: string;
+    createdAt: Date | string;
+  },
+  engram2: {
+    keywords: string[];
+    emotionScore: number;
+    category: string;
+    createdAt: Date | string;
+  }
 ): number {
-  let similarity = 0
-  let totalWeight = 0
+  let similarity = 0;
+  let totalWeight = 0;
 
   // 카테고리별 희귀성 점수 계산
-  const rarity1 = getCategoryRarityScore(engram1.category)
-  const rarity2 = getCategoryRarityScore(engram2.category)
-  const avgRarity = (rarity1 + rarity2) / 2
+  const rarity1 = getCategoryRarityScore(engram1.category);
+  const rarity2 = getCategoryRarityScore(engram2.category);
+  const avgRarity = (rarity1 + rarity2) / 2;
 
   // 동적 가중치 계산 (희귀성에 따라 조정)
-  const keywordWeight = 0.4 + (0.3 * (1 - avgRarity))  // 0.4~0.7 범위 (일상적일수록 키워드 중요)
-  const emotionWeight = 0.2 + (0.1 * avgRarity)        // 0.2~0.3 범위 (희귀할수록 감정 중요)
-  const categoryWeight = 0.1 + (0.2 * avgRarity)       // 0.1~0.3 범위 (희귀할수록 카테고리 중요)
-  const timeWeight = 0.1                                // 시간은 고정
+  const keywordWeight = 0.4 + 0.3 * (1 - avgRarity); // 0.4~0.7 범위 (일상적일수록 키워드 중요)
+  const emotionWeight = 0.2 + 0.1 * avgRarity; // 0.2~0.3 범위 (희귀할수록 감정 중요)
+  const categoryWeight = 0.1 + 0.2 * avgRarity; // 0.1~0.3 범위 (희귀할수록 카테고리 중요)
+  const timeWeight = 0.1; // 시간은 고정
 
   // 1. 키워드 유사도 (동적 가중치)
-  const commonKeywords = engram1.keywords.filter((k: string) => 
+  const commonKeywords = engram1.keywords.filter((k: string) =>
     engram2.keywords.includes(k)
-  ).length
-  
-  const minKeywords = Math.min(engram1.keywords.length, engram2.keywords.length)
-  const keywordSimilarity = minKeywords > 0 ? (commonKeywords / minKeywords) : 0
-  
+  ).length;
+
+  const minKeywords = Math.min(
+    engram1.keywords.length,
+    engram2.keywords.length
+  );
+  const keywordSimilarity = minKeywords > 0 ? commonKeywords / minKeywords : 0;
+
   // 공통 키워드가 2개 이상일 때만 높은 점수
-  const keywordBonus = commonKeywords >= 2 ? 1.0 : 0.5
-  const adjustedKeywordSimilarity = keywordSimilarity * keywordBonus
-  
-  similarity += adjustedKeywordSimilarity * keywordWeight
-  totalWeight += keywordWeight
+  const keywordBonus = commonKeywords >= 2 ? 1.0 : 0.5;
+  const adjustedKeywordSimilarity = keywordSimilarity * keywordBonus;
+
+  similarity += adjustedKeywordSimilarity * keywordWeight;
+  totalWeight += keywordWeight;
 
   // 2. 감정 유사도 (동적 가중치)
-  const emotionDiff = Math.abs(engram1.emotionScore - engram2.emotionScore)
-  const emotionSimilarity = emotionDiff < 0.5 ? (1 - emotionDiff) : 0.2
-  similarity += emotionSimilarity * emotionWeight
-  totalWeight += emotionWeight
+  const emotionDiff = Math.abs(engram1.emotionScore - engram2.emotionScore);
+  const emotionSimilarity = emotionDiff < 0.5 ? 1 - emotionDiff : 0.2;
+  similarity += emotionSimilarity * emotionWeight;
+  totalWeight += emotionWeight;
 
   // 3. 카테고리 유사도 (동적 가중치 - 희귀할수록 중요)
-  const categorySimilarity = engram1.category === engram2.category ? 
-    (0.6 + (avgRarity * 0.4)) : 0  // 희귀한 카테고리일수록 0.6~1.0 점수
-  similarity += categorySimilarity * categoryWeight
-  totalWeight += categoryWeight
+  const categorySimilarity =
+    engram1.category === engram2.category ? 0.6 + avgRarity * 0.4 : 0; // 희귀한 카테고리일수록 0.6~1.0 점수
+  similarity += categorySimilarity * categoryWeight;
+  totalWeight += categoryWeight;
 
   // 4. 시간적 근접성 (고정 가중치)
   const timeDiff = Math.abs(
-    new Date(engram1.createdAt).getTime() - new Date(engram2.createdAt).getTime()
-  )
-  const daysDiff = timeDiff / (1000 * 60 * 60 * 24)
-  const timeSimilarity = Math.max(0, 1 - (daysDiff / 7))
-  similarity += timeSimilarity * timeWeight
-  totalWeight += timeWeight
+    new Date(engram1.createdAt).getTime() -
+      new Date(engram2.createdAt).getTime()
+  );
+  const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
+  const timeSimilarity = Math.max(0, 1 - daysDiff / 7);
+  similarity += timeSimilarity * timeWeight;
+  totalWeight += timeWeight;
 
-  const finalSimilarity = similarity / totalWeight
-  
+  const finalSimilarity = similarity / totalWeight;
+
   // 최종 조정: 0.7 이상의 높은 점수는 더 엄격하게
   if (finalSimilarity > 0.7) {
-    return 0.7 + (finalSimilarity - 0.7) * 0.3
+    return 0.7 + (finalSimilarity - 0.7) * 0.3;
   }
-  
-  return finalSimilarity
+
+  return finalSimilarity;
 }
 
 function determineSynapseType(
-  engram1: { emotionScore: number; category: string; createdAt: Date | string }, 
+  engram1: { emotionScore: number; category: string; createdAt: Date | string },
   engram2: { emotionScore: number; category: string; createdAt: Date | string }
-): 'SEMANTIC' | 'EMOTIONAL' | 'TEMPORAL' | 'ASSOCIATIVE' {
-  const rarity1 = getCategoryRarityScore(engram1.category)
-  const rarity2 = getCategoryRarityScore(engram2.category)
-  const avgRarity = (rarity1 + rarity2) / 2
-  
+): "SEMANTIC" | "EMOTIONAL" | "TEMPORAL" | "ASSOCIATIVE" {
+  const rarity1 = getCategoryRarityScore(engram1.category);
+  const rarity2 = getCategoryRarityScore(engram2.category);
+  const avgRarity = (rarity1 + rarity2) / 2;
+
   // 같은 카테고리이고 희귀한 카테고리면 의미적 연결 우선
   if (engram1.category === engram2.category && avgRarity > 0.5) {
-    return 'SEMANTIC'
+    return "SEMANTIC";
   }
-  
+
   // 감정 점수가 비슷하면 감정적 연결
-  const emotionDiff = Math.abs(engram1.emotionScore - engram2.emotionScore)
+  const emotionDiff = Math.abs(engram1.emotionScore - engram2.emotionScore);
   if (emotionDiff < 0.3) {
-    return 'EMOTIONAL'
+    return "EMOTIONAL";
   }
-  
+
   // 시간이 가까우면 시간적 연결
   const timeDiff = Math.abs(
-    new Date(engram1.createdAt).getTime() - new Date(engram2.createdAt).getTime()
-  )
-  const daysDiff = timeDiff / (1000 * 60 * 60 * 24)
+    new Date(engram1.createdAt).getTime() -
+      new Date(engram2.createdAt).getTime()
+  );
+  const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
   if (daysDiff < 1) {
-    return 'TEMPORAL'
+    return "TEMPORAL";
   }
-  
+
   // 같은 카테고리이지만 일상적인 카테고리면 연상 연결
   if (engram1.category === engram2.category && avgRarity <= 0.5) {
-    return 'ASSOCIATIVE'
+    return "ASSOCIATIVE";
   }
-  
+
   // 기본값은 연상 연결
-  return 'ASSOCIATIVE'
-} 
+  return "ASSOCIATIVE";
+}
