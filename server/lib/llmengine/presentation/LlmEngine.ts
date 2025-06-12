@@ -1,5 +1,6 @@
 import { LlmService } from '../application/LlmService'
 import { LlmConfig, LlmResponse } from '../domain/types'
+import { GeminiClient } from '../infrastructure/GeminiClient'
 
 export class LlmEngine {
   private service: LlmService
@@ -18,11 +19,12 @@ export class LlmEngine {
       timeout: options?.timeout || 30000
     }
 
-    this.service = new LlmService(config)
+    const client = new GeminiClient(config)
+    this.service = new LlmService(client)
   }
 
   async prompt(prompt: string): Promise<LlmResponse> {
-    return await this.service.prompt(prompt)
+    return await this.service.prompt(prompt, undefined)
   }
 
   async promptWithOptions(

@@ -1,7 +1,8 @@
 import { GoogleGenAI } from "@google/genai";
 import { LlmRequest, LlmResponse, LlmConfig } from "../domain/types";
+import { LlmClient } from "../domain/LlmClient";
 
-export class GeminiClient {
+export class GeminiClient implements LlmClient {
   private ai: GoogleGenAI;
 
   constructor(private config: LlmConfig) {

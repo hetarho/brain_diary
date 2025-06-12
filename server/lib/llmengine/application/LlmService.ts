@@ -1,15 +1,11 @@
-import { GeminiClient } from '../infrastructure/GeminiClient'
-import { LlmRequest, LlmResponse, LlmConfig } from '../domain/types'
+import { LlmClient } from '../domain/LlmClient'
+import { LlmRequest, LlmResponse } from '../domain/types'
 
 export class LlmService {
-  private client: GeminiClient
-
-  constructor(config: LlmConfig) {
-    this.client = new GeminiClient(config)
-  }
+  constructor(private client: LlmClient) {}
 
   async prompt(
-    prompt: string, 
+    prompt: string,
     options?: {
       model?: string
       maxTokens?: number
@@ -19,10 +15,7 @@ export class LlmService {
   ): Promise<LlmResponse> {
     const request: LlmRequest = {
       prompt,
-      model: options?.model,
-      maxTokens: options?.maxTokens,
-      temperature: options?.temperature,
-      systemMessage: options?.systemMessage
+      ...options,
     }
 
     return await this.client.call(request)
@@ -39,7 +32,7 @@ export class LlmService {
   ): Promise<LlmResponse> {
     return await this.prompt(prompt, {
       ...options,
-      systemMessage
+      systemMessage,
     })
   }
 } 
