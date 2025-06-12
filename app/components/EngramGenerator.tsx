@@ -331,10 +331,12 @@ function EngramCard({ engram, onEngramClick, isSelected }: {
     }>
     importance: number
     currentStrength: number
-    keywords: string[]
     rehearsalCount: number
-    lastActivatedAt?: string | Date
+    lastActivatedAt?: string | Date | null
     decayRate?: number
+    temporalMarker?: string | null
+    spatialMarker?: string | null
+    emotionalTone?: number | null
   },
   onEngramClick?: (engramId: string) => void
   isSelected?: boolean
@@ -344,18 +346,19 @@ function EngramCard({ engram, onEngramClick, isSelected }: {
 
   const getCategoryRarityInfo = (category: string) => {
     const rarityScores: Record<string, { score: number; label: string; color: string }> = {
-      TRAVEL: { score: 0.9, label: '매우 희귀', color: 'bg-red-100 text-red-700' },
-      HOBBY: { score: 0.7, label: '희귀', color: 'bg-orange-100 text-orange-700' },
-      LEARNING: { score: 0.6, label: '보통', color: 'bg-yellow-100 text-yellow-700' },
-      EXPERIENCE: { score: 0.5, label: '보통', color: 'bg-yellow-100 text-yellow-700' },
-      PERSON: { score: 0.4, label: '보통', color: 'bg-yellow-100 text-yellow-700' },
-      PLACE: { score: 0.4, label: '보통', color: 'bg-yellow-100 text-yellow-700' },
-      RELATIONSHIP: { score: 0.3, label: '일상적', color: 'bg-green-100 text-green-700' },
-      WORK: { score: 0.2, label: '매우 일상적', color: 'bg-blue-100 text-blue-700' },
-      HEALTH: { score: 0.2, label: '매우 일상적', color: 'bg-blue-100 text-blue-700' },
-      OTHER: { score: 0.3, label: '일상적', color: 'bg-green-100 text-green-700' }
+      UNPREDICTABLE: { score: 0.9, label: '매우 희귀', color: 'bg-red-100 text-red-700' },
+      PROCEDURAL: { score: 0.8, label: '희귀', color: 'bg-orange-100 text-orange-700' },
+      SEMANTIC: { score: 0.7, label: '희귀', color: 'bg-orange-100 text-orange-700' },
+      EPISODIC: { score: 0.5, label: '보통', color: 'bg-yellow-100 text-yellow-700' },
+      SOCIAL: { score: 0.5, label: '보통', color: 'bg-yellow-100 text-yellow-700' },
+      CONTEXTUAL: { score: 0.4, label: '보통', color: 'bg-yellow-100 text-yellow-700' },
+      ASSOCIATIVE: { score: 0.4, label: '보통', color: 'bg-yellow-100 text-yellow-700' },
+      SPATIAL: { score: 0.3, label: '일상적', color: 'bg-green-100 text-green-700' },
+      EMOTIONAL: { score: 0.3, label: '일상적', color: 'bg-green-100 text-green-700' },
+      PERCEPTUAL: { score: 0.3, label: '일상적', color: 'bg-green-100 text-green-700' },
+      PREDICTABLE: { score: 0.2, label: '매우 일상적', color: 'bg-blue-100 text-blue-700' },
     }
-    return rarityScores[category] || { score: 0.3, label: '일상적', color: 'bg-green-100 text-green-700' }
+    return rarityScores[category] || { score: 0.3, label: '보통', color: 'bg-gray-100 text-gray-700' }
   }
 
   const getEmotionInfo = (emotion: string) => {
@@ -454,33 +457,52 @@ function EngramCard({ engram, onEngramClick, isSelected }: {
         </div>
       )}
       
-      <div className="flex gap-4 text-xs text-gray-400">
-        <span title="주관적 중요도 (0.0 ~ 1.0)">
-          ⭐ {engram.importance.toFixed(1)}
-        </span>
-        <span title="현재 기억 강도 (0.0 ~ 1.0)">
-          💪 {engram.currentStrength.toFixed(1)}
-        </span>
-        <span title="재열람 횟수">
-          🔄 {engram.rehearsalCount}회
-        </span>
-        {engram.decayRate && (
-          <span title="감쇄율">
-            📉 {(engram.decayRate * 100).toFixed(0)}%/일
+      <div className="flex justify-between items-center mt-3">
+        <div className="flex gap-4 text-xs text-gray-400">
+          <span title="주관적 중요도 (0.0 ~ 1.0)">
+            ⭐ {engram.importance.toFixed(1)}
           </span>
+          <span title="현재 기억 강도 (0.0 ~ 1.0)">
+            💪 {engram.currentStrength.toFixed(1)}
+          </span>
+          <span title="재열람 횟수">
+            🔄 {engram.rehearsalCount}회
+          </span>
+          {engram.decayRate && (
+            <span title="감쇄율">
+              📉 {(engram.decayRate * 100).toFixed(0)}%/일
+            </span>
+          )}
+        </div>
+        
+        {engram.emotionalTone && (
+          <div className="flex items-center gap-1 text-xs text-gray-400" title={`감정 톤: ${engram.emotionalTone.toFixed(2)}`}>
+            <span>{engram.emotionalTone > 0 ? '😊' : '😟'}</span>
+            <div className="w-10 h-1.5 bg-gray-200 rounded-full">
+              <div
+                className={`h-full rounded-full ${engram.emotionalTone > 0 ? 'bg-green-400' : 'bg-red-400'}`}
+                style={{
+                  width: `${Math.abs(engram.emotionalTone) * 100}%`,
+                  marginLeft: engram.emotionalTone > 0 ? '50%' : `${50 - Math.abs(engram.emotionalTone) * 50}%`,
+                }}
+              />
+            </div>
+          </div>
         )}
       </div>
       
-      <div className="mt-2">
-        <div className="flex flex-wrap gap-1">
-          {engram.keywords.map((keyword: string, index: number) => (
-            <span
-              key={index}
-              className="text-xs bg-gray-700 text-gray-200 px-2 py-1 rounded"
-            >
-              {keyword}
+      <div className="mt-2 border-t border-gray-200 pt-2">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+          {engram.temporalMarker && (
+            <span title="시간적 맥락">
+              <span className="font-mono">⏰</span> {engram.temporalMarker}
             </span>
-          ))}
+          )}
+          {engram.spatialMarker && (
+            <span title="공간적 맥락">
+              <span className="font-mono">📍</span> {engram.spatialMarker}
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -605,7 +627,6 @@ function ConnectedEngramCard({ engram, synapse, onEngramClick }: {
     }>
     importance: number
     currentStrength: number
-    keywords: string[]
     rehearsalCount: number
   },
   synapse: {
@@ -699,18 +720,6 @@ function ConnectedEngramCard({ engram, synapse, onEngramClick }: {
         <span>💪 {engram.currentStrength.toFixed(1)}</span>
       </div>
       
-      <div className="mt-2">
-        <div className="flex flex-wrap gap-1">
-          {engram.keywords.slice(0, 3).map((keyword: string, index: number) => (
-            <span
-              key={index}
-              className="text-xs bg-purple-50 text-purple-600 px-1 py-0.5 rounded"
-            >
-              {keyword}
-            </span>
-          ))}
-        </div>
-      </div>
     </div>
   )
 } 

@@ -8,6 +8,7 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// 사용자 모델
 model User {
   id         String   @id @default(cuid())
   name       String
@@ -24,200 +25,282 @@ model User {
   @@map("users")
 }
 
+// 일기 엔트리 - 사용자가 작성한 전체 일기
+// 실제 뇌에는 "일기"라는 개념이 없지만, UX를 위해 유지
 model Entry {
   id        String   @id @default(cuid())
-  content   String
+  content   String   // 전체 일기 내용
   userId    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  engrams   Engram[]
+  engrams   Engram[] // 이 일기에서 추출된 엔그램들
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("entries")
 }
 
+// 엔그램(Engram) - 기억의 물리적 흔적
+// 특정 경험에 의해 활성화되고 물리적 변화를 겪는 뉴런 집합을 모델링
 model Engram {
   id                  String                 @id @default(cuid())
-  content             String
-  importance          Float                  @default(0.5)
-  rehearsalCount      Int                    @default(0)
-  lastActivatedAt     DateTime               @default(now())
-  decayRate           Float                  @default(0.1)
-  currentStrength     Float                  @default(1.0)
-  consolidationState  ConsolidationState     @default(FRESH)
-  category            MemoryType
-  keywords            String[]
+  content             String                 // 엔그램의 실제 내용 (예: "집에 가는 길", "고양이")
+  
+  // 기억 강도 관련 필드
+  importance          Float                  @default(0.5)      // 중요도 (0.0~1.0) - 도파민/노르에피네프린 수준
+  rehearsalCount      Int                    @default(0)        // 재활성화 횟수 - 기억 재생(replay) 횟수
+  lastActivatedAt     DateTime?                                 // 마지막 활성화 시점
+  decayRate           Float                  @default(0.1)      // 망각 속도 - 에빙하우스 망각 곡선
+  currentStrength     Float                  @default(1.0)      // 현재 기억 강도 (0.0~1.0) - 시간에 따라 감소
+  
+  // 공고화 상태
+  consolidationState  ConsolidationState     @default(FRESH)    // 시스템 공고화 상태
+  
+  // 기억 분류
+  category            MemoryType                                // 뇌과학 기반 기억 유형
+  
+  // 맥락 정보 - 해마의 place cells, time cells가 직접 인코딩
+  temporalMarker      String?                // 시간 맥락 (예: "오늘 오후", "어제 저녁")
+  spatialMarker       String?                // 공간 맥락 (예: "집", "회사", "카페") 
+  emotionalTone       Float                  @default(0.0)      // 감정 톤 (-1.0~1.0: 부정적~긍정적)
+  
+  // 관계
   entryId             String
   userId              String
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
-  cortex              CortexStore?           @relation("CortexEngram")
-  emotionTags         EmotionTag[]
-  entry               Entry                  @relation(fields: [entryId], references: [id], onDelete: Cascade)
-  user                User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  hippocampus         HippocampusStore?      @relation("HippocampusEngram")
-  context             MemoryContext?
+  
+  // 뇌의 두 가지 학습 시스템 (Complementary Learning Systems)
+  cortex              CortexStore?           @relation("CortexEngram")      // 피질 저장소 - 장기/느린 학습
+  hippocampus         HippocampusStore?      @relation("HippocampusEngram") // 해마 저장소 - 단기/빠른 학습
+  
+  // 추가 속성
+  emotionTags         EmotionTag[]           // 다차원 감정 태그
+  
+  // 기억 간섭 - 유사한 기억들이 서로 방해하는 현상
   interferingMemories MemoryInterference[]   @relation("InterferingMemory")
   targetInterferences MemoryInterference[]   @relation("TargetInterference")
+  
+  // 재공고화 - 기억 회상 시 불안정해지고 다시 저장되는 과정
   reconsolidations    ReconsolidationEvent[]
+  
+  // 시냅스 연결 - 엔그램 간의 연결
   synapseFrom         Synapse[]              @relation("FromEngram")
   synapseTo           Synapse[]              @relation("ToEngram")
+  
+  // 기억 연결 - 시간적으로 가까운 기억들의 연결
+  linkedFrom          EngramLink[]           @relation("SourceEngram")
+  linkedTo            EngramLink[]           @relation("TargetEngram")
+  
+  // 관계 정의
+  entry               Entry                  @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  user                User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, createdAt])
+  @@index([entryId])
+  @@index([lastActivatedAt])
   @@map("engrams")
 }
 
+// 엔그램 연결 - 시간적으로 가까운 기억들의 연결
+// Memory Linking: 시간적 근접성에 의한 기억 연결
+model EngramLink {
+  id              String    @id @default(cuid())
+  sourceId        String    // 첫 번째 기억
+  targetId        String    // 두 번째 기억
+  
+  // 연결 특성
+  timeGap         Int       // 두 기억 간 시간차 (분 단위)
+  overlapRatio    Float     // 엔그램 중첩 비율 (0.0~1.0)
+  linkType        LinkType  @default(TEMPORAL)
+  strength        Float     @default(0.5)
+  
+  createdAt       DateTime  @default(now())
+  
+  source          Engram    @relation("SourceEngram", fields: [sourceId], references: [id], onDelete: Cascade)
+  target          Engram    @relation("TargetEngram", fields: [targetId], references: [id], onDelete: Cascade)
+  
+  @@unique([sourceId, targetId])
+  @@index([sourceId])
+  @@index([targetId])
+  @@map("engram_links")
+}
+
+// 시냅스 - 엔그램(뉴런 집합) 간의 연결
+// 헵의 규칙: "함께 발화하는 뉴런은 함께 연결된다"
 model Synapse {
   id              String      @id @default(cuid())
-  fromEngramId    String
-  toEngramId      String
-  strength        Float       @default(0.5)
+  fromEngramId    String      // 연결 시작 엔그램
+  toEngramId      String      // 연결 도착 엔그램
+  
+  // 시냅스 강도와 가소성
+  strength        Float       @default(0.5)      // 연결 강도 (0.0~1.0)
   type            SynapseType @default(ASSOCIATIVE)
   createdAt       DateTime    @default(now())
-  activationCount Int         @default(0)
-  lastActivatedAt DateTime?
-  plasticityRate  Float       @default(0.1)
-  threshold       Float       @default(0.5)
-  history         Json?
+  activationCount Int         @default(0)        // 활성화 횟수
+  lastActivatedAt DateTime?                        // 마지막 활성화 시점
+  plasticityRate  Float       @default(0.1)      // 가소성 비율 - 변화 속도
+  threshold       Float       @default(0.5)      // 활성화 임계값
+  history         Json?                          // 강도 변화 기록
+  
+  // 시냅스 특이성 - 특정 기억 경험과의 연결
+  learningContext String?                        // 형성된 학습 맥락
+  isTagged        Boolean     @default(false)    // 시냅스 태깅 여부 (synaptic tagging)
+  
   fromEngram      Engram      @relation("FromEngram", fields: [fromEngramId], references: [id], onDelete: Cascade)
   toEngram        Engram      @relation("ToEngram", fields: [toEngramId], references: [id], onDelete: Cascade)
 
   @@unique([fromEngramId, toEngramId])
+  @@index([fromEngramId])
+  @@index([toEngramId])
   @@map("synapses")
 }
 
+// 해마 저장소 - 빠른 학습, 에피소드 기억
+// 새로운 정보를 빠르게 획득하고 저장
 model HippocampusStore {
   id             String   @id @default(cuid())
   engramId       String   @unique
-  rawData        Json
-  accessCount    Int      @default(0)
-  lastAccessedAt DateTime @default(now())
-  expiresAt      DateTime
+  rawData        Json     // 원시 형태의 상세 정보
+  accessCount    Int      @default(0)        // 접근 횟수
+  lastAccessedAt DateTime?                   // 마지막 접근 시점
+  expiresAt      DateTime                    // 만료 시간 - 시스템 공고화나 망각
   createdAt      DateTime @default(now())
   engram         Engram   @relation("HippocampusEngram", fields: [engramId], references: [id], onDelete: Cascade)
 
+  @@index([engramId])
   @@map("hippocampus_store")
 }
 
+// 대뇌피질 저장소 - 느린 학습, 의미 기억
+// 반복적인 경험을 통해 일반화된 지식 형성
 model CortexStore {
   id             String   @id @default(cuid())
   engramId       String   @unique
-  compressedData Json
-  generalization Float    @default(0.0)
-  integratedAt   DateTime
+  compressedData Json     // 압축/일반화된 정보
+  generalization Float    @default(0.0)      // 일반화 수준 (0.0~1.0)
+  integratedAt   DateTime                    // 피질로 통합된 시점
   createdAt      DateTime @default(now())
   engram         Engram   @relation("CortexEngram", fields: [engramId], references: [id], onDelete: Cascade)
 
+  @@index([engramId])
   @@map("cortex_store")
 }
 
+// 재공고화 이벤트 - 기억이 회상될 때 불안정해지고 재저장되는 과정
+// 기억은 회상할 때마다 변할 수 있음
 model ReconsolidationEvent {
   id          String                 @id @default(cuid())
   engramId    String
-  triggerType ReconsolidationTrigger
-  beforeState Json
-  afterState  Json
+  triggerType ReconsolidationTrigger // 재공고화 촉발 요인
+  beforeState Json                   // 변경 전 상태
+  afterState  Json                   // 변경 후 상태
   createdAt   DateTime               @default(now())
   engram      Engram                 @relation(fields: [engramId], references: [id], onDelete: Cascade)
 
+  @@index([engramId])
   @@map("reconsolidation_events")
 }
 
+// 감정 태그 - 다차원 감정 모델
+// 편도체에서 처리되는 정서적 정보
 model EmotionTag {
   id        String      @id @default(cuid())
+  createdAt DateTime    @default(now())
+  engram    Engram      @relation(fields: [engramId], references: [id], onDelete: Cascade)
   engramId  String
   emotion   EmotionType
   intensity Float
   valence   Float
   arousal   Float
-  createdAt DateTime    @default(now())
-  engram    Engram      @relation(fields: [engramId], references: [id], onDelete: Cascade)
 
-  @@map("emotion_tags")
+  @@index([engramId])
 }
 
-model MemoryContext {
-  id            String   @id @default(cuid())
-  engramId      String   @unique
-  location      String?
-  timeOfDay     String?
-  weather       String?
-  season        String?
-  peoplePresent String[]
-  activity      String?
-  physicalState Json?
-  engram        Engram   @relation(fields: [engramId], references: [id], onDelete: Cascade)
-
-  @@map("memory_contexts")
-}
-
+// 기억 간섭 - 유사한 기억들이 서로 방해하는 현상
 model MemoryInterference {
   id                String           @id @default(cuid())
-  targetEngramId    String
-  interferingId     String
-  type              InterferenceType
-  similarity        Float
-  impact            Float
+  targetEngramId    String           // 간섭받는 기억
+  interferingEngramId String         // 간섭하는 기억
+  type              InterferenceType // 간섭 유형
+  similarity        Float            // 유사도 (0.0~1.0)
+  impact            Float            // 영향도 (0.0~1.0)
   createdAt         DateTime         @default(now())
-  interferingEngram Engram           @relation("InterferingMemory", fields: [interferingId], references: [id], onDelete: Cascade)
+  interferingEngram Engram           @relation("InterferingMemory", fields: [interferingEngramId], references: [id], onDelete: Cascade)
   targetEngram      Engram           @relation("TargetInterference", fields: [targetEngramId], references: [id], onDelete: Cascade)
 
+  @@index([targetEngramId, interferingEngramId])
   @@map("memory_interferences")
 }
 
+// 인증 제공자
 enum Provider {
   GOOGLE
   APPLE
 }
 
+// 뇌과학 기반 기억 분류
 enum MemoryType {
-  EXPERIENCE
-  PERSON
-  PLACE
-  LEARNING
-  MENTAL
-  FEELING
-  WORK
-  RELATIONSHIP
-  HOBBY
-  HEALTH
-  TRAVEL
-  OTHER
+  EPISODIC // 개인적 경험
+  SEMANTIC // 사실적 지식
+  PROCEDURAL // 절차적 기술
+  EMOTIONAL // 감정 중심
+  SPATIAL // 공간적
+  SOCIAL // 사회적 상호작용
+  PERCEPTUAL // 감각적
+  ASSOCIATIVE // 연관 기억
+  CONTEXTUAL // 맥락적
+  PREDICTABLE // 예측 가능한 사건
+  UNPREDICTABLE // 예측 불가능한 사건
 }
 
+// 기억 공고화 상태
 enum ConsolidationState {
-  FRESH
-  CONSOLIDATING
-  CONSOLIDATED
-  DECAYING
+  FRESH         // 새로 형성된 기억
+  CONSOLIDATING // 공고화 진행 중
+  CONSOLIDATED  // 공고화 완료 (피질로 이동)
+  DECAYING      // 소멸 중
 }
 
+// 시냅스 연결 유형
 enum SynapseType {
-  ASSOCIATIVE
-  TEMPORAL
-  EMOTIONAL
-  SEMANTIC
+  ASSOCIATIVE   // 연합적 - 동시 발생
+  TEMPORAL      // 시간적 - 순차 발생
+  EMOTIONAL     // 감정적 - 정서 연결
+  SEMANTIC      // 의미적 - 개념 연결
 }
 
+// 재공고화 촉발 요인
 enum ReconsolidationTrigger {
-  RETRIEVAL
-  ASSOCIATION
-  EMOTIONAL
-  CONTEXTUAL
+  RETRIEVAL     // 회상
+  ASSOCIATION   // 연관
+  EMOTIONAL     // 감정
+  CONTEXTUAL    // 맥락
 }
 
+// 기본 감정 유형 (Plutchik's Wheel of Emotions)
 enum EmotionType {
-  JOY
-  SADNESS
-  ANGER
-  FEAR
-  SURPRISE
-  DISGUST
-  TRUST
-  ANTICIPATION
+  JOY           // 기쁨
+  SADNESS       // 슬픔
+  ANGER         // 분노
+  FEAR          // 두려움
+  SURPRISE      // 놀람
+  DISGUST       // 혐오
+  TRUST         // 신뢰
+  ANTICIPATION  // 기대
 }
 
+// 기억 간섭 유형
 enum InterferenceType {
-  PROACTIVE
-  RETROACTIVE
-  CONTEXTUAL
+  PROACTIVE     // 순행 간섭 - 이전 기억이 새 기억 방해
+  RETROACTIVE   // 역행 간섭 - 새 기억이 이전 기억 방해
+  CONTEXTUAL    // 맥락 간섭 - 유사한 맥락으로 인한 혼동
+}
+
+// 엔그램 연결 유형
+enum LinkType {
+  TEMPORAL      // 시간적 연결 - 가까운 시간에 형성된 기억
+  SEMANTIC      // 의미적 연결 - 의미상 관련된 기억
+  CAUSAL        // 인과적 연결 - 원인-결과 관계
+  EMOTIONAL     // 감정적 연결 - 유사한 감정 상태
+  SPATIAL       // 공간적 연결 - 같은 장소에서의 기억
 }
