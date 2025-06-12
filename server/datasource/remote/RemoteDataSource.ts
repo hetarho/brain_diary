@@ -209,8 +209,6 @@ class RemoteDataSourceImpl implements RemoteDataSource {
 
   // Engram methods
   async createEngram(data: CreateEngramInput): Promise<Engram> {
-    console.log('!!!!!!!!!!!!!!!!!!!!!!!!')
-    console.log(data.category)
     return this.prisma.engram.create({
       data: {
         content: data.content,
