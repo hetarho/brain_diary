@@ -66,7 +66,6 @@ export type EngramCoreData = {
   category: MemoryType;
   importance: number;
   currentStrength: number;
-  keywords: string[];
 };
 
 // The input for creating an engram in the data source.
@@ -215,7 +214,6 @@ class RemoteDataSourceImpl implements RemoteDataSource {
         category: data.category,
         importance: data.importance,
         currentStrength: data.currentStrength,
-        keywords: data.keywords,
         userId: data.userId,
         entryId: data.entryId,
         rehearsalCount: 0,
