@@ -28,7 +28,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   // tRPC 훅
-  const createTestUser = trpc.engram.createTestUser.useMutation()
+  const createTestUser = trpc.user.createUser.useMutation()
 
   const login = async () => {
     console.log('🔐 UserContext: 로그인 시작')
