@@ -1,6 +1,6 @@
 import { Entry } from "@prisma/client";
 import { Service } from "typedi";
-import RemoteDataSource from "../datasource/remote/_remoteDataSource";
+import RemoteDataSource from "../datasource/remote/remoteDataSource";
 
 @Service()
 class EntryRepository {

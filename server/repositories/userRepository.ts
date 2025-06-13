@@ -1,5 +1,5 @@
 import { Service } from "typedi";
-import RemoteDataSource from "../datasource/remote/_remoteDataSource";
+import RemoteDataSource from "../datasource/remote/remoteDataSource";
 import { Prisma, User } from "@prisma/client";
 
 @Service()
