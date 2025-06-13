@@ -1,5 +1,5 @@
 import { Service } from "typedi";
-import RemoteDataSource from "../datasource/remote/remoteDataSource";
+import RemoteDataSource from "../datasource/remote/_remoteDataSource";
 import { EmotionTag, Engram, Synapse, User } from "@prisma/client";
 
 type SynapseWithToEngram = Synapse & {
