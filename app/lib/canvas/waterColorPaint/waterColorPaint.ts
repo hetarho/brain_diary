@@ -48,7 +48,9 @@ export default class WaterColorPaint {
       const angle = (i / divisions) * 2 * Math.PI;
       const x = centerX + radius * Math.cos(angle);
       const y = centerY + radius * Math.sin(angle);
-      points.push(new WaterColorPoint(x, y, { color }));
+      const point = new WaterColorPoint(x, y, { color });
+      point.increasePointDistance(centerX, centerY, Math.random() * 10);
+      points.push(point);
     }
 
     return points;
@@ -56,19 +58,19 @@ export default class WaterColorPaint {
 
   draw(ctx: CanvasRenderingContext2D) {
     if (this.points.length === 0) return;
-    
+
     this.points.forEach((points) => {
       ctx.save(); // 각 점 세트마다 컨텍스트 상태 저장
-      
+
       // 곡선 연결을 위해 이전 점과 중간 제어점 계산
       let prevPoint = points[0];
-      prevPoint.increasePointDistance(this.x, this.y, Math.random() * 10);
+      prevPoint.increasePointDistance(this.x, this.y, Math.random() / 10);
 
       ctx.beginPath(); // 새로운 경로 시작
       ctx.moveTo(prevPoint.x, prevPoint.y);
       for (let i = 1; i < points.length; i++) {
         const point = points[i];
-        point.increasePointDistance(this.x, this.y, Math.random() * 10);
+        point.increasePointDistance(this.x, this.y, Math.random() / 10);
         // 제어점: 이전 점과 현재 점의 중간값
         const cpX = (prevPoint.x + point.x) / 2;
         const cpY = (prevPoint.y + point.y) / 2;
@@ -86,7 +88,7 @@ export default class WaterColorPaint {
       // 내부 채우기
       ctx.fillStyle = this.color;
       ctx.fill();
-      
+
       ctx.restore(); // 컨텍스트 상태 복원
     });
   }

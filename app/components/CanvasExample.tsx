@@ -1,27 +1,15 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { useCanvas, CanvasDragInfo, CanvasPoint } from "../hooks/useCanvas";
+import { useCanvas, CanvasPoint } from "../hooks/useCanvas";
 import WaterColorPaint from "../lib/canvas/waterColorPaint/waterColorPaint";
-import PencilBrush from "../lib/canvas/brushes/PencilBrush";
-import { Shape, Line, Rectangle, Circle } from "../lib/canvas/shapes/Shape";
-
-type DrawMode = "pencil" | "watercolor" | "shape";
-type ShapeType = "line" | "circle" | "rect";
-type DrawingObject = WaterColorPaint | PencilBrush | Shape;
 
 export default function CanvasExample() {
   console.log("CanvasExample Rendered");
-  const [mode, setMode] = useState<DrawMode>("pencil");
-  const [shapeType, setShapeType] = useState<ShapeType>("line");
   const [color, setColor] = useState("#000000");
   const [brushSize, setBrushSize] = useState(2);
   const [isDrawing, setIsDrawing] = useState(false);
-
-  // 그리기 객체들
-  const [currentPencil, setCurrentPencil] = useState<PencilBrush | null>(null);
-  const [currentShape, setCurrentShape] = useState<Shape | null>(null);
-  const [drawingObjects, setDrawingObjects] = useState<DrawingObject[]>([]);
+  const [drawingObjects, setDrawingObjects] = useState<WaterColorPaint[]>([]);
 
   // 저장된 상태
   const [savedState, setSavedState] = useState<ImageData | null>(null);
@@ -31,63 +19,18 @@ export default function CanvasExample() {
     onMouseDown: useCallback(
       (point: CanvasPoint) => {
         setIsDrawing(true);
-        if (mode === "pencil") {
-          const pencil = new PencilBrush(color, brushSize);
-          pencil.startPath(point.x, point.y);
-          setCurrentPencil(pencil);
-        } else if (mode === "watercolor") {
-          const waterColor = new WaterColorPaint({
-            x: point.x,
-            y: point.y,
-            size: brushSize * 10,
-            color: color + "40", // 투명도 추가
-          });
-          setDrawingObjects((prev) => [...prev, waterColor]);
-        } else if (mode === "shape") {
-          let shape: Shape;
-          switch (shapeType) {
-            case "line":
-              shape = new Line(point.x, point.y, color, false, brushSize);
-              break;
-            case "circle":
-              shape = new Circle(point.x, point.y, color, false, brushSize);
-              break;
-            case "rect":
-              shape = new Rectangle(point.x, point.y, color, false, brushSize);
-              break;
-          }
-          setCurrentShape(shape);
-        }
+
+        const waterColor = new WaterColorPaint({
+          x: point.x,
+          y: point.y,
+          size: brushSize,
+          color: color + "40", // 투명도 추가
+        });
+        setDrawingObjects((prev) => [...prev, waterColor]);
       },
-      [mode, color, brushSize, shapeType]
+      [color, brushSize]
     ),
 
-    onDragMove: useCallback(
-      (info: CanvasDragInfo) => {
-        // 드래그 중에는 다시 그리지 않음 (성능 최적화)
-        if (mode === "pencil" && currentPencil) {
-          currentPencil.addPoint(info.x, info.y);
-        } else if (mode === "shape" && currentShape) {
-          currentShape.setEndPoint(info.x, info.y);
-        }
-      },
-      [mode, currentPencil, currentShape]
-    ),
-
-    onMouseUp: useCallback(
-      (point: CanvasPoint) => {
-        setIsDrawing(false);
-        if (currentPencil) {
-          setDrawingObjects((prev) => [...prev, currentPencil]);
-          setCurrentPencil(null);
-        } else if (currentShape) {
-          currentShape.setEndPoint(point.x, point.y);
-          setDrawingObjects((prev) => [...prev, currentShape]);
-          setCurrentShape(null);
-        }
-      },
-      [currentPencil, currentShape]
-    ),
     onAnimationFrame: useCallback(
       (ctx: CanvasRenderingContext2D, width: number, height: number) => {
         // 캔버스 클리어
@@ -101,16 +44,8 @@ export default function CanvasExample() {
         drawingObjects.forEach((obj) => {
           obj.draw(ctx);
         });
-
-        // 현재 그리고 있는 객체 그리기
-        if (currentPencil) {
-          currentPencil.draw(ctx);
-        }
-        if (currentShape) {
-          currentShape.draw(ctx);
-        }
       },
-      [drawingObjects, currentPencil, currentShape]
+      [drawingObjects]
     ),
   });
 
@@ -124,20 +59,10 @@ export default function CanvasExample() {
     drawingObjects.forEach((obj) => {
       obj.draw(ctx);
     });
-
-    // 현재 그리고 있는 객체 그리기
-    if (currentPencil) {
-      currentPencil.draw(ctx);
-    }
-    if (currentShape) {
-      currentShape.draw(ctx);
-    }
-  }, [ctx, clear, drawingObjects, currentPencil, currentShape]);
+  }, [ctx, clear, drawingObjects]);
 
   const handleClearCanvas = () => {
     setDrawingObjects([]);
-    setCurrentPencil(null);
-    setCurrentShape(null);
     clear();
   };
 
@@ -170,73 +95,6 @@ export default function CanvasExample() {
 
       {/* 컨트롤 패널 */}
       <div className="mb-4 space-y-4">
-        {/* 모드 선택 */}
-        <div className="flex gap-4">
-          <button
-            onClick={() => setMode("pencil")}
-            className={`px-4 py-2 rounded ${
-              mode === "pencil"
-                ? "bg-blue-500 text-white"
-                : "bg-gray-200 text-gray-700"
-            }`}
-          >
-            연필
-          </button>
-          <button
-            onClick={() => setMode("watercolor")}
-            className={`px-4 py-2 rounded ${
-              mode === "watercolor"
-                ? "bg-blue-500 text-white"
-                : "bg-gray-200 text-gray-700"
-            }`}
-          >
-            수채화
-          </button>
-          <button
-            onClick={() => setMode("shape")}
-            className={`px-4 py-2 rounded ${
-              mode === "shape"
-                ? "bg-blue-500 text-white"
-                : "bg-gray-200 text-gray-700"
-            }`}
-          >
-            도형
-          </button>
-        </div>
-
-        {/* 도형 타입 선택 */}
-        {mode === "shape" && (
-          <div className="flex gap-2">
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                value="line"
-                checked={shapeType === "line"}
-                onChange={(e) => setShapeType(e.target.value as ShapeType)}
-              />
-              선
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                value="circle"
-                checked={shapeType === "circle"}
-                onChange={(e) => setShapeType(e.target.value as ShapeType)}
-              />
-              원
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                value="rect"
-                checked={shapeType === "rect"}
-                onChange={(e) => setShapeType(e.target.value as ShapeType)}
-              />
-              사각형
-            </label>
-          </div>
-        )}
-
         {/* 색상 및 크기 선택 */}
         <div className="flex gap-4 items-center">
           <label className="flex items-center gap-2">
@@ -298,9 +156,7 @@ export default function CanvasExample() {
       {/* 사용법 안내 */}
       <div className="mb-4 p-4 bg-blue-50 rounded">
         <p className="text-sm text-blue-800">
-          {mode === "pencil" && "마우스를 드래그하여 자유롭게 그려보세요."}
-          {mode === "watercolor" && "클릭하여 수채화 효과를 추가하세요."}
-          {mode === "shape" && "클릭하고 드래그하여 도형을 그려보세요."}
+          마우스를 드래그하여 자유롭게 그려보세요.
         </p>
       </div>
 
