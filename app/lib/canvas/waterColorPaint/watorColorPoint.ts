@@ -2,11 +2,17 @@ class WaterColorPoint {
   x: number;
   y: number;
   color: string;
+  speed: number;
 
-  constructor(x: number, y: number, { color }: { color: string }) {
+  constructor(
+    x: number,
+    y: number,
+    { color, speed }: { color: string; speed: number }
+  ) {
     this.x = x;
     this.y = y;
     this.color = color;
+    this.speed = speed;
   }
 
   increasePointDistance(
@@ -22,7 +28,7 @@ class WaterColorPoint {
     const currentDistance = Math.sqrt(dx * dx + dy * dy);
 
     // 새로운 거리 계산
-    const newDistance = currentDistance + additionalDistance;
+    const newDistance = currentDistance + additionalDistance * this.speed;
 
     // 거리 증가 비율 계산
     const ratio = newDistance / currentDistance;

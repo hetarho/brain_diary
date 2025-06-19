@@ -9,8 +9,6 @@ type WaterColorPaintData = {
   density: number;
 };
 
-const POINT_PER_SIZE = 4;
-
 export default class WaterColorPaint {
   x: number;
   y: number;
@@ -42,36 +40,33 @@ export default class WaterColorPaint {
   }
 
   private generatePoints() {
-    Array.from(
-      { length: Math.floor(this.size / POINT_PER_SIZE) },
-      (_, index) => {
-        this.points.push(
-          this.getCircleDivisionPoints(
-            this.x,
-            this.y,
-            index + 1,
-            300,
-            this.color
-          )
-        );
-      }
-    );
+    Array.from({ length: 20 }, (_, index) => {
+      this.points.push(
+        this.getCircleDivisionPoints(
+          this.x,
+          this.y,
+          this.size,
+          300,
+          this.color,
+          1 - index / 20
+        )
+      );
+    });
   }
 
   update() {
-    if (this.initialSize / this.size > 0.1) {
+    if (this.initialSize / this.size > 0.05) {
       this.points.forEach((pointSet) => {
         pointSet.forEach((point) => {
           point.increasePointDistance(
             this.x,
             this.y,
-            Math.random() * (this.initialSize / this.size)
+            (Math.random() + 0.1) * (this.initialSize / this.size) ** 1.5
           );
         });
       });
 
       const largestPoint = this.points[0];
-      const smallestPoint = this.points[this.points.length - 1];
 
       const largestSize =
         largestPoint.reduce((acc, point) => {
@@ -83,23 +78,7 @@ export default class WaterColorPaint {
           );
         }, 0) / largestPoint.length;
 
-      const smallestSize =
-        smallestPoint.reduce((acc, point) => {
-          return (
-            acc +
-            Math.sqrt(
-              Math.pow(this.x - point.x, 2) + Math.pow(this.y - point.y, 2)
-            )
-          );
-        }, 0) / smallestPoint.length;
-
       this.size = largestSize;
-
-      if (smallestSize > POINT_PER_SIZE) {
-        this.points.push(
-          this.getCircleDivisionPoints(this.x, this.y, 1, 300, this.color)
-        );
-      }
 
       this.color = this.getRGBAColor(
         this.hexColor,
@@ -113,7 +92,8 @@ export default class WaterColorPaint {
     centerY: number,
     radius: number,
     divisions: number,
-    color: string
+    color: string,
+    speed: number
   ): WaterColorPoint[] {
     const points: WaterColorPoint[] = [];
 
@@ -121,7 +101,7 @@ export default class WaterColorPaint {
       const angle = (i / divisions) * 2 * Math.PI;
       const x = centerX + radius * Math.cos(angle);
       const y = centerY + radius * Math.sin(angle);
-      const point = new WaterColorPoint(x, y, { color });
+      const point = new WaterColorPoint(x, y, { color, speed });
       points.push(point);
     }
 
