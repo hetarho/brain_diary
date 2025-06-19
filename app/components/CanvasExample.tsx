@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useCanvas, CanvasPoint } from "../hooks/useCanvas";
 import WaterColorPaint from "../lib/canvas/waterColorPaint/waterColorPaint";
 
@@ -8,6 +8,7 @@ export default function CanvasExample() {
   console.log("CanvasExample Rendered");
   const [color, setColor] = useState("#000000");
   const [brushSize, setBrushSize] = useState(2);
+  const [density, setDensity] = useState(10);
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawingObjects, setDrawingObjects] = useState<WaterColorPaint[]>([]);
 
@@ -24,11 +25,12 @@ export default function CanvasExample() {
           x: point.x,
           y: point.y,
           size: brushSize,
-          color: color + "40", // 투명도 추가
+          color: color,
+          density: density,
         });
         setDrawingObjects((prev) => [...prev, waterColor]);
       },
-      [color, brushSize]
+      [color, brushSize, density]
     ),
 
     onAnimationFrame: useCallback(
@@ -40,26 +42,15 @@ export default function CanvasExample() {
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, width, height);
 
-        // 모든 저장된 객체 그리기
+        // 모든 저장된 객체 그리기 및 업데이트
         drawingObjects.forEach((obj) => {
+          obj.update();
           obj.draw(ctx);
         });
       },
       [drawingObjects]
     ),
   });
-
-  // 그리기 객체가 변경될 때마다 캔버스를 다시 그리기
-  useEffect(() => {
-    if (!ctx) return;
-
-    clear();
-
-    // 모든 저장된 객체 그리기
-    drawingObjects.forEach((obj) => {
-      obj.draw(ctx);
-    });
-  }, [ctx, clear, drawingObjects]);
 
   const handleClearCanvas = () => {
     setDrawingObjects([]);
@@ -117,6 +108,18 @@ export default function CanvasExample() {
               className="w-32"
             />
             <span className="w-10 text-sm">{brushSize}</span>
+          </label>
+          <label className="flex items-center gap-2">
+            농도:
+            <input
+              type="range"
+              min="1"
+              max="20"
+              value={density}
+              onChange={(e) => setDensity(Number(e.target.value))}
+              className="w-32"
+            />
+            <span className="w-10 text-sm">{density}</span>
           </label>
         </div>
 

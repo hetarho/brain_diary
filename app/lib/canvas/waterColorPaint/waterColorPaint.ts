@@ -1,3 +1,4 @@
+import chroma from "chroma-js";
 import WaterColorPoint from "./watorColorPoint";
 
 type WaterColorPaintData = {
@@ -5,6 +6,7 @@ type WaterColorPaintData = {
   y: number;
   size: number;
   color: string;
+  density: number;
 };
 
 export default class WaterColorPaint {
@@ -13,26 +15,65 @@ export default class WaterColorPaint {
   size: number;
   points: WaterColorPoint[][];
   color: string;
+  private hexColor: string;
+  density: number;
+
+  private readonly DENSITY_THRESHOLD = 1;
+  private readonly SIZE_GROWTH_RATE = 0.02;
+  private readonly DENSITY_DECAY_RATE = 0.005;
 
   constructor(data: WaterColorPaintData) {
-    const { x, y, color, size } = data;
+    const { x, y, color, size, density } = data;
     this.x = x;
     this.y = y;
     this.size = size;
+    this.hexColor = color;
+    this.density = density;
+    this.color = this.getRGBAColor(this.hexColor, this.density / 15);
 
-    const paintNum = Math.floor(this.size / 2);
+    this.points = [];
+    this.generatePoints();
+  }
 
-    this.points = Array.from({ length: paintNum }, (_, index) => {
-      return this.getCircleDivisionPoints(
-        x,
-        y,
-        size * Math.pow(1.1, index + 1),
-        200,
-        color
+  private getRGBAColor(hex: string, alpha: number): string {
+    return chroma(hex)
+      .alpha(Math.max(0, Math.min(1, alpha)))
+      .hex();
+  }
+
+  private generatePoints() {
+    Array.from({ length: this.size }, (_, index) => {
+      this.points.push(
+        this.getCircleDivisionPoints(this.x, this.y, index + 1, 300, this.color)
       );
     });
+  }
 
-    this.color = color;
+  update() {
+    if (this.density > this.DENSITY_THRESHOLD) {
+      const tmpSize = this.size;
+      const sizeIncrease = this.density * this.SIZE_GROWTH_RATE;
+      this.size += sizeIncrease;
+      this.density -= this.DENSITY_DECAY_RATE * this.density;
+      this.density = Math.max(this.DENSITY_THRESHOLD, this.density);
+
+      if (Math.floor(tmpSize) !== Math.floor(this.size)) {
+        this.points.push(
+          this.getCircleDivisionPoints(this.x, this.y, 1, 300, this.color)
+        );
+      }
+
+      this.points.forEach((pointSet) => {
+        pointSet.forEach((point) => {
+          point.increasePointDistance(
+            this.x,
+            this.y,
+            Math.random() * (this.DENSITY_DECAY_RATE * 100)
+          );
+        });
+      });
+      this.color = this.getRGBAColor(this.hexColor, this.density / 15);
+    }
   }
 
   getCircleDivisionPoints(
@@ -49,7 +90,6 @@ export default class WaterColorPaint {
       const x = centerX + radius * Math.cos(angle);
       const y = centerY + radius * Math.sin(angle);
       const point = new WaterColorPoint(x, y, { color });
-      point.increasePointDistance(centerX, centerY, Math.random() * 10);
       points.push(point);
     }
 
@@ -60,36 +100,28 @@ export default class WaterColorPaint {
     if (this.points.length === 0) return;
 
     this.points.forEach((points) => {
-      ctx.save(); // 각 점 세트마다 컨텍스트 상태 저장
+      if (points.length < 2) return;
+      ctx.save();
 
-      // 곡선 연결을 위해 이전 점과 중간 제어점 계산
-      let prevPoint = points[0];
-      prevPoint.increasePointDistance(this.x, this.y, Math.random() / 10);
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
 
-      ctx.beginPath(); // 새로운 경로 시작
-      ctx.moveTo(prevPoint.x, prevPoint.y);
-      for (let i = 1; i < points.length; i++) {
-        const point = points[i];
-        point.increasePointDistance(this.x, this.y, Math.random() / 10);
-        // 제어점: 이전 점과 현재 점의 중간값
-        const cpX = (prevPoint.x + point.x) / 2;
-        const cpY = (prevPoint.y + point.y) / 2;
-        ctx.quadraticCurveTo(cpX, cpY, point.x, point.y);
-        prevPoint = point;
+      const firstMidX = (points[points.length - 1].x + points[0].x) / 2;
+      const firstMidY = (points[points.length - 1].y + points[0].y) / 2;
+      ctx.moveTo(firstMidX, firstMidY);
+
+      for (let i = 0; i < points.length; i++) {
+        const p1 = points[i];
+        const p2 = points[(i + 1) % points.length];
+        const midX = (p1.x + p2.x) / 2;
+        const midY = (p1.y + p2.y) / 2;
+        ctx.quadraticCurveTo(p1.x, p1.y, midX, midY);
       }
 
-      // 마지막 점에서 첫 점으로 곡선 연결
-      const firstPoint = points[0];
-      const cpX = (prevPoint.x + firstPoint.x) / 2;
-      const cpY = (prevPoint.y + firstPoint.y) / 2;
-      ctx.quadraticCurveTo(cpX, cpY, firstPoint.x, firstPoint.y);
       ctx.closePath();
-
-      // 내부 채우기
-      ctx.fillStyle = this.color;
       ctx.fill();
 
-      ctx.restore(); // 컨텍스트 상태 복원
+      ctx.restore();
     });
   }
 }
