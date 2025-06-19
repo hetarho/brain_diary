@@ -7,7 +7,7 @@ import WaterColorPaint from "../lib/canvas/waterColorPaint/waterColorPaint";
 export default function CanvasExample() {
   console.log("CanvasExample Rendered");
   const [color, setColor] = useState("#000000");
-  const [brushSize, setBrushSize] = useState(2);
+  const [brushSize, setBrushSize] = useState(4);
   const [density, setDensity] = useState(10);
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawingObjects, setDrawingObjects] = useState<WaterColorPaint[]>([]);
@@ -101,7 +101,7 @@ export default function CanvasExample() {
             크기:
             <input
               type="range"
-              min="1"
+              min="4"
               max="20"
               value={brushSize}
               onChange={(e) => setBrushSize(Number(e.target.value))}

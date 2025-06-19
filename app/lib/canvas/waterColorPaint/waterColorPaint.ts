@@ -9,27 +9,27 @@ type WaterColorPaintData = {
   density: number;
 };
 
+const POINT_PER_SIZE = 4;
+
 export default class WaterColorPaint {
   x: number;
   y: number;
   size: number;
+  initialSize: number;
   points: WaterColorPoint[][];
   color: string;
   private hexColor: string;
   density: number;
-
-  private readonly DENSITY_THRESHOLD = 1;
-  private readonly SIZE_GROWTH_RATE = 0.02;
-  private readonly DENSITY_DECAY_RATE = 0.005;
 
   constructor(data: WaterColorPaintData) {
     const { x, y, color, size, density } = data;
     this.x = x;
     this.y = y;
     this.size = size;
+    this.initialSize = size;
     this.hexColor = color;
     this.density = density;
-    this.color = this.getRGBAColor(this.hexColor, this.density / 15);
+    this.color = color;
 
     this.points = [];
     this.generatePoints();
@@ -42,37 +42,69 @@ export default class WaterColorPaint {
   }
 
   private generatePoints() {
-    Array.from({ length: this.size }, (_, index) => {
-      this.points.push(
-        this.getCircleDivisionPoints(this.x, this.y, index + 1, 300, this.color)
-      );
-    });
+    Array.from(
+      { length: Math.floor(this.size / POINT_PER_SIZE) },
+      (_, index) => {
+        this.points.push(
+          this.getCircleDivisionPoints(
+            this.x,
+            this.y,
+            index + 1,
+            300,
+            this.color
+          )
+        );
+      }
+    );
   }
 
   update() {
-    if (this.density > this.DENSITY_THRESHOLD) {
-      const tmpSize = this.size;
-      const sizeIncrease = this.density * this.SIZE_GROWTH_RATE;
-      this.size += sizeIncrease;
-      this.density -= this.DENSITY_DECAY_RATE * this.density;
-      this.density = Math.max(this.DENSITY_THRESHOLD, this.density);
-
-      if (Math.floor(tmpSize) !== Math.floor(this.size)) {
-        this.points.push(
-          this.getCircleDivisionPoints(this.x, this.y, 1, 300, this.color)
-        );
-      }
-
+    if (this.initialSize / this.size > 0.1) {
       this.points.forEach((pointSet) => {
         pointSet.forEach((point) => {
           point.increasePointDistance(
             this.x,
             this.y,
-            Math.random() * (this.DENSITY_DECAY_RATE * 100)
+            Math.random() * (this.initialSize / this.size)
           );
         });
       });
-      this.color = this.getRGBAColor(this.hexColor, this.density / 15);
+
+      const largestPoint = this.points[0];
+      const smallestPoint = this.points[this.points.length - 1];
+
+      const largestSize =
+        largestPoint.reduce((acc, point) => {
+          return (
+            acc +
+            Math.sqrt(
+              Math.pow(this.x - point.x, 2) + Math.pow(this.y - point.y, 2)
+            )
+          );
+        }, 0) / largestPoint.length;
+
+      const smallestSize =
+        smallestPoint.reduce((acc, point) => {
+          return (
+            acc +
+            Math.sqrt(
+              Math.pow(this.x - point.x, 2) + Math.pow(this.y - point.y, 2)
+            )
+          );
+        }, 0) / smallestPoint.length;
+
+      this.size = largestSize;
+
+      if (smallestSize > POINT_PER_SIZE) {
+        this.points.push(
+          this.getCircleDivisionPoints(this.x, this.y, 1, 300, this.color)
+        );
+      }
+
+      this.color = this.getRGBAColor(
+        this.hexColor,
+        this.initialSize / this.size
+      );
     }
   }
 
