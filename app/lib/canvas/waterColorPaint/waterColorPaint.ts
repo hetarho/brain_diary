@@ -40,17 +40,69 @@ export default class WaterColorPaint {
   }
 
   private generatePoints() {
-    Array.from({ length: 20 }, (_, index) => {
+    const pointNumber = 2;
+    Array.from({ length: pointNumber }, (_, index) => {
       this.points.push(
         this.getCircleDivisionPoints(
           this.x,
           this.y,
           this.size,
           300,
-          this.color,
-          1 - index / 20
+          Math.pow(1 - index / pointNumber, 1.3)
         )
       );
+    });
+  }
+
+  getCircleDivisionPoints(
+    centerX: number,
+    centerY: number,
+    radius: number,
+    divisions: number,
+    speed: number
+  ): WaterColorPoint[] {
+    const points: WaterColorPoint[] = [];
+
+    let currentSpeed = speed;
+
+    for (let i = 0; i < divisions; i++) {
+      const direction = currentSpeed < speed ? 1 : -1;
+      currentSpeed = currentSpeed + 0.1 * (Math.random() - 0.3) * direction;
+      const angle = (i / divisions) * 2 * Math.PI;
+      const x = centerX + radius * Math.cos(angle);
+      const y = centerY + radius * Math.sin(angle);
+      const point = new WaterColorPoint(x, y, { speed: currentSpeed });
+      points.push(point);
+    }
+
+    return points;
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    if (this.points.length === 0) return;
+
+    this.points.forEach((points) => {
+      ctx.save();
+
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+
+      const firstMidX = (points[points.length - 1].x + points[0].x) / 2;
+      const firstMidY = (points[points.length - 1].y + points[0].y) / 2;
+      ctx.moveTo(firstMidX, firstMidY);
+
+      for (let i = 0; i < points.length; i++) {
+        const p1 = points[i];
+        const p2 = points[(i + 1) % points.length];
+        const midX = (p1.x + p2.x) / 2;
+        const midY = (p1.y + p2.y) / 2;
+        ctx.quadraticCurveTo(p1.x, p1.y, midX, midY);
+      }
+
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
     });
   }
 
@@ -61,7 +113,7 @@ export default class WaterColorPaint {
           point.increasePointDistance(
             this.x,
             this.y,
-            (Math.random() + 0.1) * (this.initialSize / this.size) ** 1.5
+            (Math.random() * 40 + 0.2) * (this.initialSize / this.size)
           );
         });
       });
@@ -85,55 +137,5 @@ export default class WaterColorPaint {
         this.initialSize / this.size
       );
     }
-  }
-
-  getCircleDivisionPoints(
-    centerX: number,
-    centerY: number,
-    radius: number,
-    divisions: number,
-    color: string,
-    speed: number
-  ): WaterColorPoint[] {
-    const points: WaterColorPoint[] = [];
-
-    for (let i = 0; i < divisions; i++) {
-      const angle = (i / divisions) * 2 * Math.PI;
-      const x = centerX + radius * Math.cos(angle);
-      const y = centerY + radius * Math.sin(angle);
-      const point = new WaterColorPoint(x, y, { color, speed });
-      points.push(point);
-    }
-
-    return points;
-  }
-
-  draw(ctx: CanvasRenderingContext2D) {
-    if (this.points.length === 0) return;
-
-    this.points.forEach((points) => {
-      if (points.length < 2) return;
-      ctx.save();
-
-      ctx.fillStyle = this.color;
-      ctx.beginPath();
-
-      const firstMidX = (points[points.length - 1].x + points[0].x) / 2;
-      const firstMidY = (points[points.length - 1].y + points[0].y) / 2;
-      ctx.moveTo(firstMidX, firstMidY);
-
-      for (let i = 0; i < points.length; i++) {
-        const p1 = points[i];
-        const p2 = points[(i + 1) % points.length];
-        const midX = (p1.x + p2.x) / 2;
-        const midY = (p1.y + p2.y) / 2;
-        ctx.quadraticCurveTo(p1.x, p1.y, midX, midY);
-      }
-
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.restore();
-    });
   }
 }

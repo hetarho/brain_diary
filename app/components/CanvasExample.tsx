@@ -28,7 +28,13 @@ export default function CanvasExample() {
           color: color,
           density: density,
         });
-        setDrawingObjects((prev) => [...prev, waterColor]);
+        setDrawingObjects((prev) => {
+          let nextObjects = prev;
+          if (prev.length > 200) {
+            nextObjects = prev.slice(1);
+          }
+          return [...nextObjects, waterColor];
+        });
       },
       [color, brushSize, density]
     ),

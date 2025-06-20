@@ -1,17 +1,11 @@
 class WaterColorPoint {
   x: number;
   y: number;
-  color: string;
   speed: number;
 
-  constructor(
-    x: number,
-    y: number,
-    { color, speed }: { color: string; speed: number }
-  ) {
+  constructor(x: number, y: number, { speed }: { speed: number }) {
     this.x = x;
     this.y = y;
-    this.color = color;
     this.speed = speed;
   }
 
