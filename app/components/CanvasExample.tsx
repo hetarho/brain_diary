@@ -41,9 +41,9 @@ export default function CanvasExample() {
         const waterColor = new WaterColorPaint({
           x: Math.random() * width,
           y: Math.random() * height,
-          size: Math.random() * 25 + 5,
-          color: chroma.random().hex(),
-          density: Math.random() * 0.3,
+          size: Math.random() * 30 + 5,
+          color: chroma.random().brighten(0.3).hex(),
+          density: Math.random() * 0.4,
         });
         return [...prev, waterColor];
       });
