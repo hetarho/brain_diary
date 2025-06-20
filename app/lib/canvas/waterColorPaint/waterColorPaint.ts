@@ -40,14 +40,14 @@ export default class WaterColorPaint {
   }
 
   private generatePoints() {
-    const pointNumber = 2;
+    const pointNumber = 4;
     Array.from({ length: pointNumber }, (_, index) => {
       this.points.push(
         this.getCircleDivisionPoints(
           this.x,
           this.y,
           this.size,
-          300,
+          Math.random() * 400 + 100,
           Math.pow(1 - index / pointNumber, 1.3)
         )
       );
@@ -82,8 +82,6 @@ export default class WaterColorPaint {
     if (this.points.length === 0) return;
 
     this.points.forEach((points) => {
-      ctx.save();
-
       ctx.fillStyle = this.color;
       ctx.beginPath();
 
@@ -101,19 +99,17 @@ export default class WaterColorPaint {
 
       ctx.closePath();
       ctx.fill();
-
-      ctx.restore();
     });
   }
 
   update() {
-    if (this.initialSize / this.size > 0.05) {
+    if (this.initialSize / this.size > 0.1) {
       this.points.forEach((pointSet) => {
         pointSet.forEach((point) => {
           point.increasePointDistance(
             this.x,
             this.y,
-            (Math.random() * 40 + 0.2) * (this.initialSize / this.size)
+            (Math.random() * 5 + 0.2) * (this.initialSize / this.size)
           );
         });
       });
@@ -122,19 +118,14 @@ export default class WaterColorPaint {
 
       const largestSize =
         largestPoint.reduce((acc, point) => {
-          return (
-            acc +
-            Math.sqrt(
-              Math.pow(this.x - point.x, 2) + Math.pow(this.y - point.y, 2)
-            )
-          );
+          return acc + Math.hypot(this.x - point.x, this.y - point.y);
         }, 0) / largestPoint.length;
 
       this.size = largestSize;
 
       this.color = this.getRGBAColor(
         this.hexColor,
-        this.initialSize / this.size
+        this.density + (this.initialSize / this.size) * (1 - this.density)
       );
     }
   }
