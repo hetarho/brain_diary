@@ -30,27 +30,37 @@ export default function CanvasExample() {
     ),
   });
 
-  useEffect(() => {
-    const interval = setInterval(() => {
+  const drawNext = useCallback(
+    async (delay: number) => {
+      if (width === 0 || height === 0) return;
       setDrawingObjects((prev) => {
         if (prev.length > 30) {
-          clearInterval(interval);
           return prev;
         }
 
         const waterColor = new WaterColorPaint({
           x: Math.random() * width,
           y: Math.random() * height,
-          size: Math.random() * 30 + 5,
+          size: Math.random() * 25 + 5,
           color: chroma.random().brighten(0.3).hex(),
-          density: Math.random() * 0.4,
+          density: Math.random() * 0.2,
         });
+
         return [...prev, waterColor];
       });
-    }, 300);
 
-    return () => clearInterval(interval);
-  }, [height, width]);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      const nextDelayAdditional = Math.random() * 150;
+      if (delay < 1200) {
+        drawNext(delay + nextDelayAdditional);
+      }
+    },
+    [height, width]
+  );
+
+  useEffect(() => {
+    drawNext(0);
+  }, [drawNext]);
 
   return (
     <div className="p-8">

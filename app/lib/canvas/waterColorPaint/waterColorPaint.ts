@@ -47,7 +47,7 @@ export default class WaterColorPaint {
           this.x,
           this.y,
           this.size,
-          Math.random() * 400 + 100,
+          Math.random() * 250 + 100,
           Math.pow(1 - index / pointNumber, 1.3)
         )
       );
