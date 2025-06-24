@@ -1,23 +1,25 @@
 import { z } from "zod";
-import { router, publicProcedure } from "../trpc";
+import { router, publicProcedure, protectedProcedure } from "../trpc";
 import { LlmEngine } from "../../lib/llmengine";
 import Container from "typedi";
 import EngramRepository from "@/server/repositories/engramRepository";
 import SynapseRepository from "@/server/repositories/synapesRepository";
 import { prisma } from "@/prisma/prisma";
 
-// Zod 스키마 정의
+// Zod 스키마 정의 - userId 제거 (컨텍스트에서 가져옴)
 const generateEngramsSchema = z.object({
   diaryContent: z.string().min(10),
-  userId: z.string(),
   entryId: z.string(),
 });
 
 export const engramRouter = router({
-  generate: publicProcedure
+  generate: protectedProcedure  // publicProcedure → protectedProcedure 변경
     .input(generateEngramsSchema)
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {  // ctx 추가
       try {
+        // 🔒 안전: 세션에서 userId 가져옴
+        const userId = ctx.session.user.id;
+        
         // LLM 엔진으로 엔그램 생성
         const llm = new LlmEngine(process.env.GEMINI_API_KEY!);
 
@@ -139,7 +141,7 @@ export const engramRouter = router({
                 spatialMarker: engramData.spatialMarker,
                 emotionalTone: engramData.emotionalTone,
                 entryId: input.entryId,
-                userId: input.userId,
+                userId: userId,  // 컨텍스트에서 가져온 안전한 userId
                 emotionTags: {
                   create: engramData.emotionTags.map(
                     (tag: {
@@ -201,13 +203,11 @@ export const engramRouter = router({
       }
     }),
 
-  // 사용자별 엔그램 조회
-  getByUser: publicProcedure
-    .input(z.object({ userId: z.string() }))
-    .query(async ({ input }) => {
-      const engrams = await Container.get(EngramRepository).findByUserId(
-        input.userId
-      );
+  // 사용자별 엔그램 조회 (보호된 프로시저)
+  getByUser: protectedProcedure
+    .query(async ({ ctx }) => {
+      const userId = ctx.session.user.id;
+      const engrams = await Container.get(EngramRepository).findByUserId(userId);
       return engrams;
     }),
 

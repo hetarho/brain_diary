@@ -61,13 +61,15 @@ Brain 앱의 아키텍처는 다음과 같은 핵심적인 뇌과학 이론과 �
 - **React 19**
 - **TypeScript**
 - **Tailwind CSS**
-- **tRPC** 
+- **tRPC**
+- **NextAuth.js** (Google OAuth)
 
 ### Backend
 - **tRPC Server**
 - **Prisma ORM**
 - **PostgreSQL** 
-- **Gemini 2.0 Flash API**
+- **Google Gemini API**
+- **NextAuth.js** with Prisma Adapter
 
 ## 🚀 시작하기
 
@@ -77,17 +79,35 @@ npm install
 ```
 
 ### 2. 환경변수 설정
-`.env` 파일을 생성하고 다음 내용을 추가하세요:
+`.env.local` 파일을 생성하고 다음 내용을 추가하세요:
 
 ```bash
-# Gemini API
-GEMINI_API_KEY=your-gemini-api-key
+# Database
+DATABASE_URL="your-postgresql-connection-string"
+DIRECT_URL="your-postgresql-direct-connection-string"
 
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-DATABASE_URL=postgresql://postgres:your-password@db.your-project-id.supabase.co:5432/postgres
+# NextAuth.js
+NEXTAUTH_SECRET="your-secret-key-here"
+NEXTAUTH_URL="http://localhost:3000"
+
+# Google OAuth
+AUTH_GOOGLE_ID="your-google-client-id"
+AUTH_GOOGLE_SECRET="your-google-client-secret"
+
+# Google Gemini API
+GEMINI_API_KEY="your-gemini-api-key"
 ```
+
+### Google OAuth 설정
+
+1. [Google Cloud Console](https://console.cloud.google.com/)에서 새 프로젝트를 생성하거나 기존 프로젝트를 선택
+2. "APIs & Services" > "Credentials"로 이동
+3. "Create Credentials" > "OAuth 2.0 Client IDs" 선택
+4. Application type을 "Web application"으로 설정
+5. Authorized redirect URIs에 다음 추가:
+   - `http://localhost:3000/api/auth/callback/google` (개발용)
+   - `https://yourdomain.com/api/auth/callback/google` (프로덕션용)
+6. Client ID와 Secret을 `.env.local`에 추가
 
 ### 3. 데이터베이스 설정
 ```bash

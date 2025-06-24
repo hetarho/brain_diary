@@ -21,6 +21,13 @@ class UserRepository {
   async create(data: Prisma.UserCreateInput): Promise<User> {
     return this.remoteDataSource.getInstance().user.create({ data });
   }
+
+  async update(userId: string, data: Prisma.UserUpdateInput): Promise<User> {
+    return this.remoteDataSource.getInstance().user.update({
+      where: { id: userId },
+      data,
+    });
+  }
 }
 
 export default UserRepository;

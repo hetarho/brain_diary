@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { trpc } from "../../server/trpc/client";
-import { useUser } from "../contexts/UserContext";
+import { useAuth } from "../lib/auth/hooks";
 
 export function EngramGenerator() {
   const [diaryContent, setDiaryContent] = useState("");
@@ -13,20 +13,20 @@ export function EngramGenerator() {
     return today.toISOString().split("T")[0]; // YYYY-MM-DD 형식
   });
 
-  // UserContext 사용
-  const { user: currentUser, isLoading: userLoading } = useUser();
+  // Auth 사용
+  const { user: currentUser, isLoading: userLoading } = useAuth();
 
-  // tRPC 훅 사용
+  // tRPC 훅 사용 - userId 제거 (protectedProcedure로 변경됨)
   const generateEngrams = trpc.engram.generate.useMutation();
   const createEntry = trpc.entry.createEntry.useMutation();
   const deleteEntry = trpc.entry.deleteEntry.useMutation();
   const { data: userEngrams, refetch } = trpc.engram.getByUser.useQuery(
-    { userId: currentUser?.id || "" },
+    undefined, // userId 제거
     { enabled: !!currentUser?.id }
   );
   const { data: userEntries, refetch: refetchEntries } =
     trpc.entry.getEntriesByUser.useQuery(
-      { userId: currentUser?.id || "" },
+      undefined, // userId 제거
       { enabled: !!currentUser?.id }
     );
   const { data: connectedEngrams } = trpc.engram.getConnectedEngrams.useQuery(
@@ -38,16 +38,14 @@ export function EngramGenerator() {
     if (!diaryContent.trim() || !currentUser) return;
 
     try {
-      // 1. 테스트 일기 생성
+      // 1. 테스트 일기 생성 (userId 제거 - 서버에서 세션으로 확인)
       const entry = await createEntry.mutateAsync({
-        userId: currentUser.id,
         content: diaryContent,
       });
 
-      // 2. 엔그램 생성
+      // 2. 엔그램 생성 (userId 제거 - 서버에서 세션으로 확인)
       const result = await generateEngrams.mutateAsync({
         diaryContent,
-        userId: currentUser.id,
         entryId: entry.id,
       });
 
