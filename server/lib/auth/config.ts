@@ -23,34 +23,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET,
   callbacks: {
     // 권한 확인만 담당 (true/false 반환)
-    authorized: async ({ auth, request: { nextUrl } }) => {
+    authorized: async ({ auth }) => {
       const isLoggedIn = !!auth?.user;
-      const isOnProtectedPage = nextUrl.pathname.startsWith("/canvas");
-
-      // 보호된 페이지에 로그인 없이 접근하면 false (자동으로 로그인 페이지로 리다이렉트)
-      if (isOnProtectedPage && !isLoggedIn) {
+      if (!isLoggedIn) {
         return false;
       }
 
       return true;
     },
-    
+
     // 리다이렉트 로직 담당
     redirect: async ({ url, baseUrl }) => {
       // 상대 경로면 baseUrl과 결합
       if (url.startsWith("/")) {
         return `${baseUrl}${url}`;
       }
-      
+
       // 같은 도메인이면 허용
       if (new URL(url).origin === baseUrl) {
         return url;
       }
-      
+
       // 다른 도메인이면 홈으로
       return baseUrl;
     },
-    
+
     async signIn({ user, account }) {
       // PrismaAdapter가 자동으로 User/Account를 생성하므로 별도 로직 불필요
       // 필요하다면 여기서 추가 검증 로직 추가 가능
