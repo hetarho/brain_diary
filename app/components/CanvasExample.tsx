@@ -69,7 +69,7 @@ export default function CanvasExample() {
       </h1>
 
       {/* 캔버스 */}
-      <div className="border-2 border-gray-300 h-[500px] w-full rounded-lg overflow-hidden shadow-lg">
+      <div className="border-gray-300 h-[500px] w-full rounded-lg overflow-hidden shadow-lg">
         <canvas ref={canvasRef} className="cursor-crosshair w-full h-full" />
       </div>
     </div>
