@@ -1,66 +1,108 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-/* 기본 파스텔 테마 */
+/* 기본 테마 (blossom) */
 :root {
-  --background: #fef7f7;
-  --foreground: #5a5a5a;
-  --primary: #f8b4d9;
-  --secondary: #b8e6b8;
-  --accent: #ffcccb;
-  --muted: #f5f5f5;
-  --card: #ffffff;
-  --border: #e5e5e5;
+  --primary: oklch(0.205 0 0);
+  --secondary: oklch(0.97 0 0);
+  --accent: oklch(0.97 0 0);
+  --muted: oklch(0.97 0 0);
+  --card: oklch(1 0 0);
+  --border: oklch(0.922 0 0);
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
 }
 
-/* 파스텔 테마 */
-[data-theme="pastel"] {
-  --background: #fef7f7;
-  --foreground: #5a5a5a;
-  --primary: #f8b4d9;
-  --secondary: #b8e6b8;
-  --accent: #ffcccb;
-  --muted: #f5f5f5;
-  --card: #ffffff;
-  --border: #e5e5e5;
-  --text-primary: #4a4a4a;
-  --text-secondary: #7a7a7a;
-  --button-primary: #f8b4d9;
-  --button-secondary: #b8e6b8;
-  --shadow: rgba(248, 180, 217, 0.2);
+/* Blossom: 파스텔, 부드럽고 화사한 느낌 */
+[data-theme="blossom"] {
+  --background: oklch(0.98 0.015 340);
+  --foreground: oklch(0.38 0.01 270);
+  --primary: oklch(0.85 0.16 340);
+  --secondary: oklch(0.95 0.13 320);
+  --accent: oklch(0.95 0.07 20);
+  --muted: oklch(0.97 0.01 270);
+  --card: oklch(1 0 0);
+  --border: oklch(0.93 0.01 270);
+  --text-primary: oklch(0.32 0.01 270);
+  --text-secondary: oklch(0.48 0.01 270);
+  --button-primary: oklch(0.85 0.16 340);
+  --button-secondary: oklch(0.92 0.07 140);
+  --shadow: oklch(0.85 0.16 340 / 0.18);
 }
 
-/* 어두운 테마 */
-[data-theme="dark-palette"] {
-  --background: #1a1a1a;
-  --foreground: #e0e0e0;
-  --primary: #6366f1;
-  --secondary: #8b5cf6;
-  --accent: #06b6d4;
-  --muted: #2a2a2a;
-  --card: #262626;
-  --border: #404040;
-  --text-primary: #f0f0f0;
-  --text-secondary: #a0a0a0;
-  --button-primary: #6366f1;
-  --button-secondary: #8b5cf6;
-  --shadow: rgba(99, 102, 241, 0.3);
+/* Midnight: 어두운 밤하늘 느낌 */
+[data-theme="midnight"] {
+  --background: oklch(0.22 0.04 270);
+  --foreground: oklch(0.85 0.01 270);
+  --primary: oklch(0.55 0.19 270);
+  --secondary: oklch(0.62 0.19 300);
+  --accent: oklch(0.75 0.19 200);
+  --muted: oklch(0.28 0.03 270);
+  --card: oklch(0.28 0.03 270);
+  --border: oklch(0.45 0.01 270);
+  --text-primary: oklch(0.95 0.01 270);
+  --text-secondary: oklch(0.7 0.01 270);
+  --button-primary: oklch(0.55 0.19 270);
+  --button-secondary: oklch(0.62 0.19 300);
+  --shadow: oklch(0.55 0.19 270 / 0.22);
 }
 
-/* 밝은 테마 */
-[data-theme="bright-palette"] {
-  --background: #ffffff;
-  --foreground: #333333;
-  --primary: #ff6b6b;
-  --secondary: #4ecdc4;
-  --accent: #ffe66d;
-  --muted: #f8f9fa;
-  --card: #ffffff;
-  --border: #dee2e6;
-  --text-primary: #212529;
-  --text-secondary: #6c757d;
-  --button-primary: #ff6b6b;
-  --button-secondary: #4ecdc4;
-  --shadow: rgba(255, 107, 107, 0.2);
+/* Rainbow: 화려한 색상, 밝고 다채로운 느낌 */
+[data-theme="rainbow"] {
+  --background: oklch(0.98 0.02 100);
+  --foreground: oklch(0.32 0.01 270);
+  --primary: oklch(0.65 0.22 29);
+  --secondary: oklch(0.85 0.13 180);
+  --accent: oklch(0.97 0.19 100);
+  --muted: oklch(0.99 0.01 270);
+  --card: oklch(1 0 0);
+  --border: oklch(0.92 0.01 270);
+  --text-primary: oklch(0.25 0.01 270);
+  --text-secondary: oklch(0.55 0.01 270);
+  --button-primary: oklch(0.65 0.22 29);
+  --button-secondary: oklch(0.85 0.13 180);
+  --shadow: oklch(0.65 0.22 29 / 0.18);
+}
+
+/* Ocean: 바다처럼 푸른 느낌 */
+[data-theme="ocean"] {
+  --background: oklch(0.95 0.04 200);
+  --foreground: oklch(0.32 0.13 250);
+  --primary: oklch(0.45 0.42 220);
+  --secondary: oklch(0.85 0.13 250);
+  --accent: oklch(0.89 0.14 210);
+  --muted: oklch(0.92 0.04 220);
+  --card: oklch(0.98 0.01 220);
+  --border: oklch(0.88 0.04 220);
+  --text-primary: oklch(0.32 0.13 250);
+  --text-secondary: oklch(0.48 0.07 250);
+  --button-primary: oklch(0.82 0.19 220);
+  --button-secondary: oklch(0.85 0.13 250);
+  --shadow: oklch(0.82 0.19 220 / 0.18);
 }
 
 @theme inline {
@@ -79,48 +121,45 @@
   --color-shadow: var(--shadow);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* 추가 컴포넌트 스타일링 */
-.theme-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  box-shadow: 0 2px 8px var(--shadow);
-}
-
-.theme-button-primary {
-  background: var(--button-primary);
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.5rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.theme-button-primary:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-.theme-button-secondary {
-  background: var(--button-secondary);
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.5rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.theme-button-secondary:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }

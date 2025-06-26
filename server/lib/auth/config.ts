@@ -23,7 +23,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET,
   callbacks: {
     // 권한 확인만 담당 (true/false 반환)
-    authorized: async ({ auth }) => {
+    authorized: async ({ auth, request }) => {
+      const url = request.nextUrl;
+      const publicRoutes = ["/", "/canvas", "/auth/signin", "/auth/signup"];
+
+      if (publicRoutes.includes(url.pathname)) {
+        return true;
+      }
       const isLoggedIn = !!auth?.user;
       if (!isLoggedIn) {
         return false;

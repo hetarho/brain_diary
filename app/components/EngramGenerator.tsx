@@ -84,8 +84,8 @@ export function EngramGenerator() {
 
       {/* 사용자 정보 표시 */}
       {currentUser && (
-        <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
-          <p className="text-sm text-green-700">
+        <div className="mb-4 p-3 rounded-lg border bg-secondary">
+          <p className="text-sm text-secondary-foreground">
             👤 로그인됨: {currentUser.name} ({currentUser.email})
           </p>
         </div>
@@ -107,7 +107,7 @@ export function EngramGenerator() {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full p-2 border rounded-lg text-sm border-input bg-background text-primary"
               max={new Date().toISOString().split("T")[0]} // 오늘 이후 날짜는 선택 불가
             />
           </div>
@@ -115,7 +115,7 @@ export function EngramGenerator() {
         <textarea
           value={diaryContent}
           onChange={(e) => setDiaryContent(e.target.value)}
-          className="w-full h-32 p-3 border border-gray-300 rounded-lg resize-none"
+          className="w-full h-32 p-3 border rounded-lg resize-none border-input bg-background text-primary"
           placeholder="어떤 일이 있었나요?"
         />
       </div>
@@ -126,7 +126,7 @@ export function EngramGenerator() {
         disabled={
           generateEngrams.isPending || !diaryContent.trim() || !currentUser
         }
-        className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50"
+        className="bg-primary text-primary-foreground px-6 py-2 rounded-lg hover:bg-primary/90 disabled:opacity-50"
       >
         {generateEngrams.isPending
           ? "엔그램 생성 중..."
@@ -137,14 +137,14 @@ export function EngramGenerator() {
 
       {/* 에러 표시 */}
       {generateEngrams.error && (
-        <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-lg">
+        <div className="mt-4 p-3 bg-destructive/10 text-destructive rounded-lg">
           {generateEngrams.error.message}
         </div>
       )}
 
       {/* 생성된 일기들 */}
       <div className="mt-8">
-        <h3 className="text-xl font-semibold mb-4 text-gray-100">
+        <h3 className="text-xl font-semibold mb-4 text-primary">
           📝 생성된 일기들
         </h3>
 
@@ -167,55 +167,57 @@ export function EngramGenerator() {
             ))}
           </div>
         ) : (
-          <p className="text-gray-400 mb-8">아직 작성된 일기가 없습니다.</p>
+          <p className="text-muted-foreground mb-8">
+            아직 작성된 일기가 없습니다.
+          </p>
         )}
       </div>
 
       {/* 엔그램 목록 */}
       <div className="mt-8">
-        <h3 className="text-xl font-semibold mb-4 text-gray-100">
+        <h3 className="text-xl font-semibold mb-4 text-primary">
           🧠 생성된 엔그램들
         </h3>
 
         {/* 최근 분석 결과 표시 */}
         {generateEngrams.data?.analysis && (
-          <div className="mb-6 p-4 bg-blue-900/20 rounded-lg border border-blue-800">
-            <h4 className="font-semibold mb-2 text-gray-300">📊 분석 결과</h4>
+          <div className="mb-6 p-4 bg-primary/10 rounded-lg border border-primary">
+            <h4 className="font-semibold mb-2 text-primary">📊 분석 결과</h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
-                <span className="text-gray-400">배경 정보:</span>
-                <span className="ml-1 font-medium text-gray-300">
+                <span className="text-muted-foreground">배경 정보:</span>
+                <span className="ml-1 font-medium text-primary">
                   {generateEngrams.data.analysis.backgroundSentences}개
                 </span>
               </div>
               <div>
-                <span className="text-gray-400">오늘의 경험:</span>
-                <span className="ml-1 font-medium text-gray-300">
+                <span className="text-muted-foreground">오늘의 경험:</span>
+                <span className="ml-1 font-medium text-primary">
                   {generateEngrams.data.analysis.experienceSentences}개
                 </span>
               </div>
               <div>
-                <span className="text-gray-400">생성된 엔그램:</span>
-                <span className="ml-1 font-medium text-gray-300">
+                <span className="text-muted-foreground">생성된 엔그램:</span>
+                <span className="ml-1 font-medium text-primary">
                   {generateEngrams.data.analysis.totalEngrams}개
                 </span>
               </div>
               <div>
-                <span className="text-gray-400">기억 강도:</span>
-                <span className="ml-1 font-medium text-gray-300">
+                <span className="text-muted-foreground">기억 강도:</span>
+                <span className="ml-1 font-medium text-primary">
                   {generateEngrams.data.analysis.memoryStrength}
                 </span>
               </div>
             </div>
             <div className="mt-2">
-              <span className="text-gray-400">주요 감정:</span>
-              <span className="ml-1 font-medium text-gray-300">
+              <span className="text-muted-foreground">주요 감정:</span>
+              <span className="ml-1 font-medium text-primary">
                 {generateEngrams.data.analysis.dominantEmotion}
               </span>
             </div>
             <div className="mt-1">
-              <span className="text-gray-400">주요 테마:</span>
-              <span className="ml-1 text-gray-300">
+              <span className="text-muted-foreground">주요 테마:</span>
+              <span className="ml-1 text-primary">
                 {generateEngrams.data.analysis.keyThemes?.join(", ")}
               </span>
             </div>
@@ -224,23 +226,20 @@ export function EngramGenerator() {
 
         {/* 분류 정보 표시 */}
         {generateEngrams.data?.classification && (
-          <div className="mb-6 p-4 bg-gray-800 rounded-lg border border-gray-700">
-            <h4 className="font-semibold mb-3 text-gray-100">
+          <div className="mb-6 p-4 bg-muted rounded-lg border border-muted-foreground/30">
+            <h4 className="font-semibold mb-3 text-primary">
               🔍 문장 분류 결과
             </h4>
 
             {generateEngrams.data.classification.backgroundInfo?.length > 0 && (
               <div className="mb-3">
-                <h5 className="text-sm font-medium text-gray-400 mb-1">
+                <h5 className="text-sm font-medium text-muted-foreground mb-1">
                   📋 배경 정보 (저장되지 않음)
                 </h5>
-                <ul className="text-sm text-gray-500 space-y-1">
+                <ul className="text-sm text-muted-foreground space-y-1">
                   {generateEngrams.data.classification.backgroundInfo.map(
                     (info: string, index: number) => (
-                      <li
-                        key={index}
-                        className="pl-2 border-l-2 border-gray-600"
-                      >
+                      <li key={index} className="pl-2 border-l-2 border-muted">
                         {info}
                       </li>
                     )
@@ -252,16 +251,13 @@ export function EngramGenerator() {
             {generateEngrams.data.classification.todaysExperience?.length >
               0 && (
               <div>
-                <h5 className="text-sm font-medium text-green-400 mb-1">
+                <h5 className="text-sm font-medium text-accent mb-1">
                   ⭐ 오늘의 경험 (엔그램으로 저장됨)
                 </h5>
-                <ul className="text-sm text-green-300 space-y-1">
+                <ul className="text-sm text-accent-foreground space-y-1">
                   {generateEngrams.data.classification.todaysExperience.map(
                     (exp: string, index: number) => (
-                      <li
-                        key={index}
-                        className="pl-2 border-l-2 border-green-600"
-                      >
+                      <li key={index} className="pl-2 border-l-2 border-accent">
                         {exp}
                       </li>
                     )
@@ -343,7 +339,7 @@ export function EngramGenerator() {
                         )}
                       </div>
                     ) : (
-                      <p className="text-purple-400 text-center py-2 text-sm">
+                      <p className="text-text-primary text-center py-2 text-sm">
                         연상률 50% 이상의 연결된 기억이 없습니다.
                       </p>
                     )}
@@ -353,7 +349,9 @@ export function EngramGenerator() {
             ))}
           </div>
         ) : (
-          <p className="text-gray-400">아직 생성된 엔그램이 없습니다.</p>
+          <p className="text-muted-foreground">
+            아직 생성된 엔그램이 없습니다.
+          </p>
         )}
       </div>
     </div>

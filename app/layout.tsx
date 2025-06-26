@@ -4,7 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { TRPCProvider } from "@/server/trpc/Provider";
 import { AuthProvider } from "./lib/auth/providers";
-import { ThemeProvider } from 'next-themes';
+import { ThemeProvider } from "next-themes";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,15 +31,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider 
-          themes={['pastel', 'dark-palette', 'bright-palette']}
-          defaultTheme="pastel"
+        <ThemeProvider
+          themes={["rainbow", "ocean", "midnight", "blossom"]}
+          defaultTheme="rainbow"
           attribute="data-theme"
         >
           <AuthProvider>
-            <TRPCProvider>
-              {children}
-            </TRPCProvider>
+            <TRPCProvider>{children}</TRPCProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>
