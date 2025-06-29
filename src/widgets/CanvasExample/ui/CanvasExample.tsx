@@ -1,11 +1,9 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { useCanvas } from "../hooks/useCanvas";
-import WaterColorPaint from "../lib/canvas/waterColorPaint/waterColorPaint";
 import chroma from "chroma-js";
-import { cn } from "../lib/utils";
-import { Button } from "./button";
+import { Button, cn, useCanvas } from "@/src/shared";
+import { WaterColorPaint } from "@/src/entities";
 
 export default function CanvasExample() {
   const [drawingObjects, setDrawingObjects] = useState<WaterColorPaint[]>([]);
@@ -67,7 +65,7 @@ export default function CanvasExample() {
         const waterColor = new WaterColorPaint({
           x: (Math.random() * width2) / 2 + width2 / 4,
           y: (Math.random() * height2) / 2 + height2 / 4,
-          size: Math.random() * 8 + 8,
+          size: (Math.random() * Math.min(width2, height2)) / 20,
           color: chroma.random().brighten(0.4).hex(),
           density: Math.random() * 0.1,
         });

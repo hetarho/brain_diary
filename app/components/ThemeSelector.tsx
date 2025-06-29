@@ -2,7 +2,7 @@
 
 import { useTheme } from "next-themes";
 import { useState, useEffect } from "react";
-import { Button } from "./button";
+import { Button } from "@/src/shared";
 
 const ThemeSelector = () => {
   const [mounted, setMounted] = useState(false);

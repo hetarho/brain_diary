@@ -1,9 +1,8 @@
 "use client";
 
-import { EngramGenerator } from "./components/EngramGenerator";
-import { useAuth } from "./lib/auth/hooks";
-import ThemeSelector from "./components/ThemeSelector";
 import Link from "next/link";
+import { Header, EngramGenerator } from "@/src/widgets";
+import { useAuth } from "@/src/shared";
 
 export default function Home() {
   const { user, isLoading, isAuthenticated, logout } = useAuth();
@@ -27,65 +26,15 @@ export default function Home() {
       className="min-h-screen"
       style={{ backgroundColor: "var(--background)" }}
     >
-      {/* 헤더 */}
-      <header
-        className="shadow-sm border-b"
-        style={{ borderColor: "var(--border)" }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1
-                className="text-xl font-semibold"
-                style={{ color: "var(--text-primary)" }}
-              >
-                Brain Diary
-              </h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              {isAuthenticated && user ? (
-                <>
-                  <Link href="/canvas">
-                    <button className="text-sm hover:opacity-80 transition-opacity text-primary">
-                      캔버스
-                    </button>
-                  </Link>
-                  <span
-                    className="text-sm"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    안녕하세요, {user.name || user.email}님
-                  </span>
-                  <button
-                    onClick={() => logout()}
-                    className="text-sm hover:opacity-80 transition-opacity"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    로그아웃
-                  </button>
-                </>
-              ) : (
-                <Link
-                  href="/auth/signin"
-                  className="text-sm hover:opacity-80 transition-opacity"
-                  style={{ color: "var(--primary)" }}
-                >
-                  로그인
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header
+        isAuthenticated={isAuthenticated}
+        user={{ name: user?.name || "", email: user?.email || "" }}
+        logout={logout}
+      />
 
       {/* 메인 콘텐츠 */}
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          {/* 테마 선택기 */}
-          <div className="mb-8">
-            <ThemeSelector />
-          </div>
-
           {isAuthenticated ? (
             <div>
               <h2
