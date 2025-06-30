@@ -2,8 +2,8 @@
 
 import { useState, useCallback, useEffect } from "react";
 import chroma from "chroma-js";
-import { Button, cn, useCanvas } from "@/src/shared";
-import { WaterColorPaint } from "@/src/entities";
+import { Button, cn, useCanvas } from "@client/shared";
+import { WaterColorPaint } from "@client/entities";
 
 export default function CanvasExample() {
   const [drawingObjects, setDrawingObjects] = useState<WaterColorPaint[]>([]);

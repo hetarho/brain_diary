@@ -1,7 +1,7 @@
 import z from "zod";
 import { protectedProcedure, router } from "../trpc";
 import Container from "typedi";
-import EntryRepository from "@/server/repositories/entryRepository";
+import EntryRepository from "@/src/server/repositories/entryRepository";
 import { prisma } from "@/prisma/prisma";
 
 export const entryRouter = router({

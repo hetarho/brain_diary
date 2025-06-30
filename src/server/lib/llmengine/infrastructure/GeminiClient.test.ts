@@ -4,7 +4,7 @@ import {
   LlmRequest,
   LlmResponse,
   LlmConfig,
-} from "@/server/lib/llmengine/domain/types";
+} from "@/src/server/lib/llmengine/domain/types";
 
 const mockGenerateContent = jest.fn();
 // @google/genai 라이브러리를 모의 처리합니다.

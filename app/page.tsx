@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Header, EngramGenerator } from "@/src/widgets";
-import { useAuth } from "@/src/shared";
+import { useAuth } from "@client/shared";
+import { EngramGenerator, Header } from "@client/widgets";
 
 export default function Home() {
   const { user, isLoading, isAuthenticated, logout } = useAuth();

@@ -1,5 +1,5 @@
 import { initTRPC, TRPCError } from "@trpc/server";
-import { auth } from "@/server/lib/auth/config";
+import { auth } from "@/src/server/lib/auth/config";
 import type { Session } from "next-auth";
 
 // tRPC 컨텍스트 타입 정의

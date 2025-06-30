@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { trpc } from "@/server/trpc/client";
-import { useAuth } from "@/src/shared";
+import { trpc } from "@server/trpc/client";
+import { useAuth } from "@client/shared";
 import EngramCard from "./EngramCard";
 import ConnectedEngramCard from "./ConnectedEngramCard";
 import EntryCard from "./EntryCard";

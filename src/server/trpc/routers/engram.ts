@@ -2,8 +2,8 @@ import { z } from "zod";
 import { router, publicProcedure, protectedProcedure } from "../trpc";
 import { LlmEngine } from "../../lib/llmengine";
 import Container from "typedi";
-import EngramRepository from "@/server/repositories/engramRepository";
-import SynapseRepository from "@/server/repositories/synapesRepository";
+import EngramRepository from "@/src/server/repositories/engramRepository";
+import SynapseRepository from "@/src/server/repositories/synapesRepository";
 import { prisma } from "@/prisma/prisma";
 
 // Zod 스키마 정의 - userId 제거 (컨텍스트에서 가져옴)

@@ -1,7 +1,7 @@
 import { LlmEngine } from './LlmEngine'
-import { LlmService } from '@/server/lib/llmengine/application/LlmService'
-import { GeminiClient } from '@/server/lib/llmengine/infrastructure/GeminiClient'
-import { LlmConfig, LlmResponse } from '@/server/lib/llmengine/domain/types'
+import { LlmService } from '@/src/server/lib/llmengine/application/LlmService'
+import { GeminiClient } from '@/src/server/lib/llmengine/infrastructure/GeminiClient'
+import { LlmConfig, LlmResponse } from '@/src/server/lib/llmengine/domain/types'
 
 // 의존하는 모듈들을 모의 처리합니다.
 jest.mock('@/server/lib/llmengine/application/LlmService')

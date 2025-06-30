@@ -1,7 +1,7 @@
 import { router } from "../trpc";
 import { z } from "zod";
 import { protectedProcedure } from "../trpc";
-import UserRepository from "@/server/repositories/userRepository";
+import UserRepository from "@/src/server/repositories/userRepository";
 import { Container } from "typedi";
 
 export const userRouter = router({

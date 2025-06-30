@@ -1,6 +1,6 @@
 import { LlmService } from './LlmService'
-import { LlmClient } from '@/server/lib/llmengine/domain/LlmClient'
-import { LlmRequest, LlmResponse } from '@/server/lib/llmengine/domain/types'
+import { LlmClient } from '@/src/server/lib/llmengine/domain/LlmClient'
+import { LlmRequest, LlmResponse } from '@/src/server/lib/llmengine/domain/types'
 
 // 가짜 LlmClient 객체를 만듭니다.
 const mockClient: jest.Mocked<LlmClient> = {

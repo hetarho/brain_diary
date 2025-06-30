@@ -1,4 +1,4 @@
-import { CanvasExample } from "@/src/widgets";
+import { CanvasExample } from "@client/widgets";
 
 export default function CanvasPage() {
   return <CanvasExample />;

@@ -1,10 +1,10 @@
 import "reflect-metadata";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { TRPCProvider } from "@/server/trpc/Provider";
+import { TRPCProvider } from "@server/trpc/Provider";
 import { ThemeProvider } from "next-themes";
-import { AuthProvider } from "@/src/app/providers/AuthProviders";
-import "@/src/app/styles/globals.css";
+import "@client/app/styles/globals.css";
+import { AuthProvider } from "@client/app/providers/AuthProviders";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

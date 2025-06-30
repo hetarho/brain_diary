@@ -1,4 +1,4 @@
-import { trpc } from "@/server/trpc/client";
+import { trpc } from "@server/trpc/client";
 
 export default function EngramCard({
   engram,

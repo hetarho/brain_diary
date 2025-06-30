@@ -25,26 +25,29 @@
       }
     ],
     "paths": {
-      "@/*": [
-        "./*"
-      ],
       "@server/*": [
-        "./server/*"
+        "./src/server/*"
+      ],
+      "@client/*": [
+        "./src/client/*"
       ],
       "@app/*": [
         "./app/*"
       ],
       "@prisma/*": [
         "./prisma/*"
-      ]
+      ],
+      "@/*": [
+        "./*"
+      ],
     }
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts"
-, "src/shared/hooks/use-auth"  ],
+    ".next/types/**/*.ts",
+  ],
   "exclude": [
     "node_modules"
   ]
