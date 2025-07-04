@@ -122,16 +122,35 @@ export const engramRouter = router({
 
         const createdEngramsWithIds: { id: string }[] = [];
 
-        // 데이터베이스 트랜잭션 시작
-        await prisma.$transaction(async (tx) => {
-          for (const engramData of result.engrams) {
-            if (!validMemoryTypes.includes(engramData.category)) {
-              console.error(
-                `Invalid category: ${engramData.category}. Defaulting to ASSOCIATIVE.`
-              );
-              engramData.category = "ASSOCIATIVE";
-            }
+        // 데이터 검증 및 전처리
+        const validatedEngrams = result.engrams.map((engramData: {
+          content: string;
+          category: string;
+          importance: number;
+          currentStrength: number;
+          temporalMarker?: string;
+          spatialMarker?: string;
+          emotionalTone?: number;
+          emotionTags: Array<{
+            emotion: string;
+            intensity: number;
+            valence: number;
+            arousal: number;
+          }>;
+        }) => {
+          if (!validMemoryTypes.includes(engramData.category)) {
+            console.error(
+              `Invalid category: ${engramData.category}. Defaulting to ASSOCIATIVE.`
+            );
+            engramData.category = "ASSOCIATIVE";
+          }
+          return engramData;
+        });
 
+        // 데이터베이스 트랜잭션 시작 - 배치 처리로 최적화
+        await prisma.$transaction(async (tx) => {
+          // 1. 모든 엔그램을 배치로 생성
+          for (const engramData of validatedEngrams) {
             const engram = await tx.engram.create({
               data: {
                 content: engramData.content,
@@ -142,7 +161,7 @@ export const engramRouter = router({
                 spatialMarker: engramData.spatialMarker,
                 emotionalTone: engramData.emotionalTone,
                 entryId: input.entryId,
-                userId: userId, // 컨텍스트에서 가져온 안전한 userId
+                userId: userId,
                 emotionTags: {
                   create: engramData.emotionTags.map(
                     (tag: {
@@ -163,33 +182,45 @@ export const engramRouter = router({
             createdEngramsWithIds.push(engram);
           }
 
-          if (result.links) {
-            for (const linkData of result.links) {
-              const sourceEngram = createdEngramsWithIds[linkData.sourceIndex];
-              const targetEngram = createdEngramsWithIds[linkData.targetIndex];
-
-              if (sourceEngram && targetEngram) {
-                await tx.engramLink.create({
-                  data: {
+          // 2. 링크 생성 (필요한 경우에만)
+          if (result.links && result.links.length > 0) {
+            const linkData = result.links
+              .map((link: {
+                sourceIndex: number;
+                targetIndex: number;
+                linkType: string;
+              }) => {
+                const sourceEngram = createdEngramsWithIds[link.sourceIndex];
+                const targetEngram = createdEngramsWithIds[link.targetIndex];
+                
+                if (sourceEngram && targetEngram) {
+                  return {
                     sourceId: sourceEngram.id,
                     targetId: targetEngram.id,
-                    linkType: linkData.linkType as
+                    linkType: link.linkType as
                       | "TEMPORAL"
                       | "CAUSAL"
                       | "SEMANTIC"
                       | "EMOTIONAL"
                       | "SPATIAL",
-                    timeGap: 0, // 임시값, 추후 계산 로직 추가 필요
-                    overlapRatio: 0, // 임시값, 추후 계산 로직 추가 필요
-                  },
-                });
-              }
+                    timeGap: 0,
+                    overlapRatio: 0,
+                  };
+                }
+                return null;
+              })
+              .filter(Boolean);
+
+            // 배치로 링크 생성
+            if (linkData.length > 0) {
+              await tx.engramLink.createMany({
+                data: linkData,
+                skipDuplicates: true,
+              });
             }
           }
-
-          // TODO: 시냅스 생성 로직은 별도의 비동기 작업으로 분리하거나,
-          // 이 트랜잭션 내에서 신규 엔그램과 기존 엔그램 간의 연결로 수정 필요.
-          // 현재는 트랜잭션 범위 문제로 주석 처리.
+        }, {
+          timeout: 30000, // 30초로 타임아웃 증가
         });
 
         return {
