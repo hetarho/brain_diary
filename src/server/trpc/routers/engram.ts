@@ -13,13 +13,14 @@ const generateEngramsSchema = z.object({
 });
 
 export const engramRouter = router({
-  generate: protectedProcedure  // publicProcedure → protectedProcedure 변경
+  generate: protectedProcedure // publicProcedure → protectedProcedure 변경
     .input(generateEngramsSchema)
-    .mutation(async ({ input, ctx }) => {  // ctx 추가
+    .mutation(async ({ input, ctx }) => {
+      // ctx 추가
       try {
         // 🔒 안전: 세션에서 userId 가져옴
         const userId = ctx.session.user.id;
-        
+
         // LLM 엔진으로 엔그램 생성
         const llm = new LlmEngine(process.env.GEMINI_API_KEY!);
 
@@ -141,7 +142,7 @@ export const engramRouter = router({
                 spatialMarker: engramData.spatialMarker,
                 emotionalTone: engramData.emotionalTone,
                 entryId: input.entryId,
-                userId: userId,  // 컨텍스트에서 가져온 안전한 userId
+                userId: userId, // 컨텍스트에서 가져온 안전한 userId
                 emotionTags: {
                   create: engramData.emotionTags.map(
                     (tag: {
@@ -199,17 +200,16 @@ export const engramRouter = router({
         };
       } catch (error) {
         console.error("Engram generation error:", error);
-        throw new Error("엔그램 생성 중 오류가 발생했습니다");
+        throw new Error(error instanceof Error ? error.message : "Unknown error");
       }
     }),
 
   // 사용자별 엔그램 조회 (보호된 프로시저)
-  getByUser: protectedProcedure
-    .query(async ({ ctx }) => {
-      const userId = ctx.session.user.id;
-      const engrams = await Container.get(EngramRepository).findByUserId(userId);
-      return engrams;
-    }),
+  getByUser: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+    const engrams = await Container.get(EngramRepository).findByUserId(userId);
+    return engrams;
+  }),
 
   // 일기별 엔그램 조회
   getByEntry: publicProcedure
