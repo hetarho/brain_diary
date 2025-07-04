@@ -191,7 +191,7 @@ export default function EngramCard({
         </div>
       </div>
 
-      <p className={`text-gray-100 mb-3 ${isSelected ? "text-gray-900" : ""}`}>
+      <p className={`text-text-primary mb-3 ${isSelected ? "text-gray-900" : ""}`}>
         {engram.content}
       </p>
 
