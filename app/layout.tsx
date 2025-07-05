@@ -2,9 +2,9 @@ import "reflect-metadata";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TRPCProvider } from "@server/trpc/Provider";
-import { ThemeProvider } from "next-themes";
 import "@client/app/styles/globals.css";
-import { AuthProvider } from "@client/app/providers/AuthProviders";
+import ThemeProvider from "@client/app/providers/ThemeProvider";
+import AuthProvider from "@client/app/providers/AuthProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,11 +31,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider
-          themes={["rainbow", "ocean", "midnight", "blossom"]}
-          defaultTheme="rainbow"
-          attribute="data-theme"
-        >
+        <ThemeProvider>
           <AuthProvider>
             <TRPCProvider>{children}</TRPCProvider>
           </AuthProvider>
