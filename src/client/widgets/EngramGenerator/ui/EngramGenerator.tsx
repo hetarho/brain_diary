@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { trpc } from "@server/trpc/client";
-import { useAuth } from "@client/shared";
 import EngramCard from "./EngramCard";
 import ConnectedEngramCard from "./ConnectedEngramCard";
 import EntryCard from "./EntryCard";
+import { useAuth } from "@client/features";
 
 export default function EngramGenerator() {
   const [diaryContent, setDiaryContent] = useState("");

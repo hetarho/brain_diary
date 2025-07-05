@@ -1,5 +1,5 @@
 import chroma from "chroma-js";
-import WaterColorPoint from "./watorColorPoint";
+import WaterColorPoint from "./waterColorPoint";
 
 type WaterColorPaintData = {
   x: number;

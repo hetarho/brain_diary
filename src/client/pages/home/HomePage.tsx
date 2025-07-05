@@ -1,8 +1,7 @@
 "use client";
 
-import { useAuth } from "@client/shared";
+import { Link, useAuth } from "@client/features";
 import { EngramGenerator, Header, ThemeSelector } from "@client/widgets";
-import Link from "next/link";
 
 export default function HomePage() {
   const { user, isLoading, isAuthenticated, logout } = useAuth();
