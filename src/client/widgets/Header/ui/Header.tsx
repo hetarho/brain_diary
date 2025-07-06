@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "@client/shared";
 
 export default function Header({
   isAuthenticated,
@@ -53,7 +53,6 @@ export default function Header({
               <Link
                 href="/auth/signin"
                 className="text-sm hover:opacity-80 transition-opacity"
-                style={{ color: "var(--primary)" }}
               >
                 로그인
               </Link>

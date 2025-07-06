@@ -1,5 +1,5 @@
-import { CanvasExample } from "@client/widgets";
+import CanvasPage from "@client/pages/canvas/CanvasPage";
 
-export default function CanvasPage() {
-  return <CanvasExample />;
+export default function Canvas() {
+  return <CanvasPage />;
 }

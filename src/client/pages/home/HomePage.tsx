@@ -1,6 +1,7 @@
 "use client";
 
-import { Link, useAuth } from "@client/features";
+import { useAuth } from "@client/features";
+import { Link } from "@client/shared";
 import { EngramGenerator, Header, ThemeSelector } from "@client/widgets";
 
 export default function HomePage() {
